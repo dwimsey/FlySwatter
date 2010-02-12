@@ -1,0 +1,1 @@
+A basic example of loading the FlSwatter client library, catching an exception and handling the report
