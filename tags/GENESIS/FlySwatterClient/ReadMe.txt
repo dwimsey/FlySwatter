@@ -1,0 +1,1 @@
+A wrapper DLL for the Google breakpad library to provide a simple error catching and reporting system.
