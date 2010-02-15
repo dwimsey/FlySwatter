@@ -21,31 +21,56 @@ END_MESSAGE_MAP()
 
 // CCrashTestDummyApp construction
 
-HMODULE crashHandlerDll = NULL;
+FLYSWATTERVARPOINTERS(FlySwatter)
 
-extern "C" {
-flyswatter_init_func_ptr FlySwatterInit;
-flyswatter_enable_func_ptr FlySwatterEnable;
-flyswatter_disable_func_ptr FlySwatterDisable;
-flyswatter_isenabled_func_ptr FlySwatterIsEnabled;
-}
+
 
 CCrashTestDummyApp::CCrashTestDummyApp()
 {
-	// TODO: add construction code here,
-	// Place all significant initialization in InitInstance
-	crashHandlerDll = LoadLibrary(_T("C:\\src\\breakpad\\src\\client\\windows\\Debug\\FlySwatter.dll"));
-	if(crashHandlerDll == NULL) {
-		MessageBox(NULL, _T("Could not load FlySwatter.dll"), _T("Initialization Error"), MB_OK);
-		exit(255);
-	}
-	FlySwatterInit = (flyswatter_init_func_ptr)GetProcAddress(crashHandlerDll, "FlySwatterInit");
-	FlySwatterEnable = (flyswatter_enable_func_ptr)GetProcAddress(crashHandlerDll, "FlySwatterEnable");
-	FlySwatterDisable = (flyswatter_disable_func_ptr)GetProcAddress(crashHandlerDll, "FlySwatterDisable");
-	FlySwatterIsEnabled = (flyswatter_isenabled_func_ptr)GetProcAddress(crashHandlerDll, "FlySwatterIsEnabled");
+	FLYSWATTERINIT(FlySwatter, L"%APPDATA%\\FlySwatter", L"http://flyswatter.notresponsible.org/report.php", NULL);
 
-	FlySwatterInit(_T("%APPDATA%\\FlySwatter"), _T("http://flyswatter.notresponsible.org/ReportCrash"));
-	FlySwatterEnable();
+	// @TODO Add this to real documentation system so it can be published somewhere useful
+	// These are used in various other predefined template strings and recommended for all crash reports
+	FlySwatterSetParam(L"AppName", L"CrashTest Dummy");
+	FlySwatterSetParam(L"CompanyShortName", L"RTS");
+	FlySwatterSetParam(L"CompanyName", L"Research Triangle Software");
+	FlySwatterSetParam(L"CompanyLegalName", L"Research Triangle Software, Inc.");
+	FlySwatterSetParam(L"AppVersion", L"0.1.2.3");
+
+	// This defines what checkpoint file we should use and how many we're expected to be allowed per day
+	FlySwatterSetParam(L"FlySwatter_CheckpointSettings", L"%APPPATH%\\FlySwatterCrashReporter\\checkpoint.dat;5")
+	// This is a semicolon/colon seperated of paths (appropriate for OS) of additional files
+	// to attach to the report
+	FlySwatterSetParam(L"FlySwatter_AttachFiles", L"%APPPATH%\\FlySwatterCrashReporter\\Debug.log");
+	// (MS Windows Only) This is a semicolon seperated list of registry keys to dump and include in the crash report
+	FlySwatterSetParam(L"FlySwatter_DumpRegKeys", L"HKLM\\Software\\FlySwatterCrashReporter;HKCU\\Software\\FlySwatterCrashReporter");
+
+	// Any variables prefixed with FlySwatter_CrashAlertDialog_ are not sent with the crash report,
+	// they are just used to configure the alert dialog
+	//
+
+	// This sets the dialog caption text for the crash alert dialog
+//	FlySwatterSetParam(L"FlySwatter_CrashAlertDialog_Title", L"{AppName} has crashed!");
+	// Text to display in the initial display area when the dialog is first displayed
+//	FlySwatterSetParam(L"FlySwatter_CrashAlertDialog_Info1Message", L"Something has caused {AppName} to crash and a crash report has been generated.\r\n\r\nThe crash report may contain confidential information from the program at the time it crashed.\r\n\r\nClick the 'Send' button to send this crash information to {CompanyShortName}.");
+	// This is no string for the more info message, its generated internally
+	// Text to display in the privacy notice area when required
+	FlySwatterSetParam(L"FlySwatter_CrashAlertDialog_Info3Message", L"Reporting this crash will send information about what the program was doing when it crashed to {CompanyLegalName}  The information included may include sections or all of the applications memory while running, information about running processes on your computer, various registry keys related to the way your system and this software is configured, log files relating to this application.  Any of these sources of information may contain confidential information and should only be sent if you are certain it contains only information you trust sending over the Internet.");
+	// This sets the text on the button which sends the report to the server
+//	FlySwatterSetParam(L"FlySwatter_CrashAlertDialog_SendButton", L"Send");
+	// This sets the text on the button that does not send anything to the server and destroys the report
+//	FlySwatterSetParam(L"FlySwatter_CrashAlertDialog_CancelButton", L"Cancel");
+	// This is the text on the 1st tab or button depending on which style is used
+//	FlySwatterSetParam(L"FlySwatter_CrashAlertDialog_Info1Button", L"Welcome");
+	// This is the text on the 2nd tab or button depending on which style is used
+//	FlySwatterSetParam(L"FlySwatter_CrashAlertDialog_Info2Button", L"More Info");
+	// This is the text on the 3rd tab or button depending on which style is used
+//	FlySwatterSetParam(L"FlySwatter_CrashAlertDialog_Info3Button", L"Privacy Information");
+
+	// This one we always set as it hides the button if its not set
+	FlySwatterSetParam(L"FlySwatter_CrashAlertDialog_DontAskCheckbox", L"Don't ask me again!");
+
+	//	FlySwatterSetParam(L"FlySwatter_CrashAlertDialog_Info1Button", L"Don't ask me again!");
 }
 
 

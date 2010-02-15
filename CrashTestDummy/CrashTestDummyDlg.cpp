@@ -160,7 +160,7 @@ typedef struct __CrashTestDummy_DummyStruct {
 void CCrashTestDummyDlg::OnBnClickedOk()
 {
 	LPCTD_DUMMYSTRUCT dummy = NULL;
-	dummy->dummyInt = 99;	// this will case an exception, and hopefully trigger FlySwatter to do its thing.
+	dummy->dummyInt = 99;	// this will cause an exception, and hopefully trigger FlySwatter to do its thing.
 	//OnOK();
 }
 
