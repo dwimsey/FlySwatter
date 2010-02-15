@@ -1,5 +1,5 @@
 #include "stdafx.h"
-
+#define USE_TAB_CONTROL_FOR_REPORTLAYOUT 1
 static HINSTANCE fsgh_Instance = NULL;
 
 void FlySwatter_UnregisterCrashAlertDialogWindowClass(HINSTANCE hInstance)
@@ -19,6 +19,7 @@ typedef struct __FlySwatterCrashAlertDialogInitDataStructure {
 	wchar_t *reportUrl;
 	LPFLYSWATTERPARAM params;
 	int params_len;
+	int useTabControl;
 } FLYSWATTERCRASHALERTDIALOGINITDATA, *LPFLYSWATTERCRASHALERTDIALOGINITDATA;
 
 const wchar_t *FlySwatterGetParamEx(LPFLYSWATTERPARAM params, int params_len, const wchar_t *name);
@@ -267,38 +268,6 @@ BOOL CenterWindow(HWND hwnd)
 }
 
 #include <commctrl.h>
-/*
-HWND WINAPI DoCreateTabControl(HWND hwndParent)
-{
-	RECT rcClient;
-	HWND hwndTab;
-	TCITEM tie;
-	int i;
-	INITCOMMONCONTROLSEX t;
-
-	// Get the dimensions of the parent window's client area, and
-	// create a tab control child window of that size.
-	GetClientRect(hwndParent, &rcClient);
-	hwndTab = CreateWindow(WC_TABCONTROL, "", WS_CHILD | WS_CLIPSIBLINGS | WS_VISIBLE, 0, 0, rcClient.right, rcClient.bottom, hwndParent, NULL, g_hinst, NULL);
-	if(hwndTab == NULL) {
-		return NULL;
-	}
-
-	// Add tabs for each day of the week.
-	tie.mask = TCIF_TEXT | TCIF_IMAGE;
-	tie.iImage = -1;
-	tie.pszText = g_achTemp;
-
-	for(i = 0; i < 7; i++) {
-		LoadString(g_hinst, IDS_FIRSTDAY + i, g_achTemp, sizeof(g_achTemp)/sizeof(g_achTemp[0]));
-		if TabCtrl_InsertItem(hwndTab, i, &tie) == -1) {
-			DestroyWindow(hwndTab);
-			return(NULL);
-		}
-	}
-	return(hwndTab);
-}
-*/
 
 typedef struct __FSCADHandles {
 	HWND hWnd;
@@ -545,7 +514,7 @@ void InitFlySwatterCrashDialog(HWND hWnd, LPFLYSWATTERCRASHALERTDIALOGINITDATA i
 	dHandle->hWnd = hWnd;
 	dHandle->params = idPtr->params;
 	dHandle->params_len = idPtr->params_len;
-	dHandle->useTabControl = 0;
+	dHandle->useTabControl = idPtr->useTabControl;
 	SetWindowLongPtr(dHandle->hWnd, DWLP_USER, (LONG_PTR)dHandle);
 	CenterWindow(hWnd);
 
@@ -570,9 +539,6 @@ void InitFlySwatterCrashDialog(HWND hWnd, LPFLYSWATTERCRASHALERTDIALOGINITDATA i
 
 	TCITEM tie;
 	dHandle->tabMain = CreateWindowEx(0, WC_TABCONTROL, L"", WS_CHILD | WS_CLIPSIBLINGS | FSWS_ISVISIBLE(1), txtRect.left, btnRect.top, cRect.right - (txtRect.left + btnRect.left), (cRect.bottom - ((btnRect.top * 3) + btnRect.bottom)), hWnd, NULL, fsgh_Instance, NULL);
-	if(dHandle->tabMain == NULL) {
-		dHandle->useTabControl = 0;
-	}
 	if(dHandle->tabMain != NULL) {
 		SetWindowLongPtr(dHandle->tabMain, GWLP_ID, IDC_TAB_MAIN);
 
@@ -774,7 +740,7 @@ INT_PTR CALLBACK FlySwatterCrashAlertDialogWndProc(HWND hDlg, UINT message, WPAR
 }
 
 
-FLYSWATTER_API int FlySwatterCrashAlert(const wchar_t *reportUrl, const wchar_t *miniDumpFilename, const LPFLYSWATTERPARAM params, const int params_len)
+int FlySwatterCrashAlert(const wchar_t *reportUrl, const wchar_t *miniDumpFilename, const LPFLYSWATTERPARAM params, const int params_len)
 {
 	MessageBox(NULL, L"Attach!", L"Attach!", MB_OK);
 	wchar_t *dumpPath = NULL;
@@ -813,6 +779,7 @@ FLYSWATTER_API int FlySwatterCrashAlert(const wchar_t *reportUrl, const wchar_t 
 	idData.params_len = params_len;
 	idData.dumpId = dumpId;
 	idData.dumpDir = dumpPath;
+	idData.useTabControl = USE_TAB_CONTROL_FOR_REPORTLAYOUT;
 	LPDLGTEMPLATE dlgTemplate = CreateFSWin32CrashAlertDlgTemplate();
 	int dialogResult = DialogBoxIndirectParamW(fsgh_Instance, dlgTemplate, NULL, FlySwatterCrashAlertDialogWndProc, (LPARAM)&idData);
 	free(dlgTemplate);
@@ -869,8 +836,34 @@ FLYSWATTER_API int FlySwatterCrashAlert(const wchar_t *reportUrl, const wchar_t 
 	ReportResult rs;	
 	wstring reportCode;
 
-	CrashReportSender cs(L"");
+	// determine if we need to use a checkpoint file and do so
+	wchar_t *tmpPtr = (wchar_t*)FlySwatterGetParamEx(params, params_len, L"FlySwatter_CheckpointSettings");
+	if(tmpPtr == NULL) {
+		tmpPtr = wcsdup(L"");
+	} else {
+		tmpPtr = wcsdup(tmpPtr);
+	}
+	wchar_t *offset = wcschr(tmpPtr, L';');
+	wchar_t *next_offset = NULL;
+	if(offset != NULL) {
+		offset[0] = L'\0';
+		offset++;
+		next_offset = wcschr(offset, L';');
+		if(next_offset != NULL) {
+			next_offset[0] = L'\0';
+			next_offset++;
+		}
+	}
+
+	CrashReportSender cs(tmpPtr);
+
+	if(offset != NULL) {
+		cs.set_max_reports_per_day(_wtoi(offset));
+		offset = next_offset;
+		next_offset = NULL;
+	}
 	rs = cs.SendCrashReport(reportUrl, paramsStr, miniDumpFilename, &reportCode);
+	free(tmpPtr);
 
 	int returnVal = 0;
 	if(dialogResult<1 || dialogResult>2) {
