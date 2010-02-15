@@ -739,7 +739,15 @@ INT_PTR CALLBACK FlySwatterCrashAlertDialogWndProc(HWND hDlg, UINT message, WPAR
 	return((INT_PTR)FALSE);
 }
 
-
+wchar_t *ExpandEnvVarsInStr(const wchar_t *inStrPtr)
+{
+	DWORD sn = ExpandEnvironmentStringsW(inStrPtr, NULL, 0);
+	wchar_t *outStrPtr = (wchar_t*)calloc(sn + 2, sizeof(wchar_t));
+	ExpandEnvironmentStringsW(inStrPtr, outStrPtr, sn + 1);
+	// ensure the string is always safely NULL terminated
+	outStrPtr[sn+1] = L'\0';
+	return(outStrPtr);
+}
 int FlySwatterCrashAlert(const wchar_t *reportUrl, const wchar_t *miniDumpFilename, const LPFLYSWATTERPARAM params, const int params_len)
 {
 	MessageBox(NULL, L"Attach!", L"Attach!", MB_OK);
@@ -841,7 +849,7 @@ int FlySwatterCrashAlert(const wchar_t *reportUrl, const wchar_t *miniDumpFilena
 	if(tmpPtr == NULL) {
 		tmpPtr = wcsdup(L"");
 	} else {
-		tmpPtr = wcsdup(tmpPtr);
+		tmpPtr = ExpandEnvVarsInStr(tmpPtr);
 	}
 	wchar_t *offset = wcschr(tmpPtr, L';');
 	wchar_t *next_offset = NULL;
@@ -864,7 +872,6 @@ int FlySwatterCrashAlert(const wchar_t *reportUrl, const wchar_t *miniDumpFilena
 	}
 	rs = cs.SendCrashReport(reportUrl, paramsStr, miniDumpFilename, &reportCode);
 	free(tmpPtr);
-
 	int returnVal = 0;
 	if(dialogResult<1 || dialogResult>2) {
 		returnVal = -10;
