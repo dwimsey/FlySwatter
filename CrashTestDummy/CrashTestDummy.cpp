@@ -37,11 +37,13 @@ CCrashTestDummyApp::CCrashTestDummyApp()
 	FlySwatterSetParam(L"CompanyLegalName", L"Research Triangle Software, Inc.");
 	FlySwatterSetParam(L"AppVersion", L"0.1.2.3");
 
-	// This defines what checkpoint file we should use and how many we're expected to be allowed per day
-	FlySwatterSetParam(L"FlySwatter_CheckpointSettings", L"%APPPATH%\\FlySwatterCrashReporter\\checkpoint.dat;5")
+	// This defines what checkpoint file we should use and how many we're expected to be allowed per day, if unset, no checkpoint file will be used and the library will not attempt to limit the number of reports sent
+	// FlySwatterSetParam(L"FlySwatter_CheckpointSettings", L"%APPDATA%\\CrashTestDummy\\fscreport.cpt;5;");
+
 	// This is a semicolon/colon seperated of paths (appropriate for OS) of additional files
 	// to attach to the report
-	FlySwatterSetParam(L"FlySwatter_AttachFiles", L"%APPPATH%\\FlySwatterCrashReporter\\Debug.log");
+	FlySwatterSetParam(L"FlySwatter_AttachFiles", L"%APPDATA%\\FlySwatterCrashReporter\\Debug.log");
+
 	// (MS Windows Only) This is a semicolon seperated list of registry keys to dump and include in the crash report
 	FlySwatterSetParam(L"FlySwatter_DumpRegKeys", L"HKLM\\Software\\FlySwatterCrashReporter;HKCU\\Software\\FlySwatterCrashReporter");
 
