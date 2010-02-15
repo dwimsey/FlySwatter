@@ -880,22 +880,26 @@ int FlySwatterCrashAlert(const wchar_t *reportUrl, const wchar_t *miniDumpFilena
 	switch(rs) {
 		case RESULT_FAILED:		// Failed to communicate with the server; try later.
 			_sntprintf(buf, 1024, L"Upload failed: %s", reportCode.c_str());
+			MessageBox(NULL, buf, L"Crash report could not be sent", MB_OK|MB_ICONHAND);
 			returnVal += -1;
 			break;
 		case RESULT_REJECTED:	// Successfully sent the crash report, but the server rejected it; don't resend this report.
 			_sntprintf(buf, 1024, L"Upload completed, but rejected by server: (No Reason): %s", reportCode.c_str());
-			returnVal += -2;
+			MessageBox(NULL, buf, L"Crash report was not accepted", MB_OK|MB_ICONHAND);
 			break;
 		case RESULT_SUCCEEDED:	// The server accepted the crash report.
-			_sntprintf(buf, 1024, L"Upload successful: %s", reportCode.c_str());
+			_sntprintf(buf, 1024, L"Crash report sent: %s", reportCode.c_str());
 			returnVal += 1;
+			//MessageBox(NULL, buf, L"Crash report accepted", MB_OK|MB_ICONHAND);
 			break;
 		case RESULT_THROTTLED:	// No attempt was made to send the crash report, because we exceeded the maximum reports per day.
-			_sntprintf(buf, 1024, L"Upload throttled: %s", reportCode.c_str());
+			_sntprintf(buf, 1024, L"You have already sent %d reports today, no more reports will be accepted until tomorrow.", cs.max_reports_per_day());
+			MessageBox(NULL, buf, L"Too many reports sent for today", MB_OK|MB_ICONHAND);
 			returnVal += -3;
 			break;
 		default:
 			_sntprintf(buf, 1024, L"Report Result: %u: %s", rs, reportCode.c_str());
+			MessageBox(NULL, buf, L"Unexpected response from report sender", MB_OK|MB_ICONHAND);
 			returnVal += -4;
 	}
 
