@@ -26,17 +26,6 @@ const wchar_t *FlySwatterGetParamEx(LPFLYSWATTERPARAM params, int params_len, co
 
 #include <stdarg.h>
 
-wchar_t *mprintf(const wchar_t *format, ...)
-{
-	va_list varlist;
-	va_start(varlist, format);
-	size_t outLen = _vscwprintf(format, varlist);
-	wchar_t *outBuf = (wchar_t*)calloc(outLen+1, sizeof(wchar_t));
-	vswprintf(outBuf, outLen, format, varlist);
-	va_end(varlist);
-	return(outBuf);
-}
-
 #define BUFFER_BLOCK_SIZE	512
 
 // This macro works inside the formatStr function
@@ -739,18 +728,8 @@ INT_PTR CALLBACK FlySwatterCrashAlertDialogWndProc(HWND hDlg, UINT message, WPAR
 	return((INT_PTR)FALSE);
 }
 
-wchar_t *ExpandEnvVarsInStr(const wchar_t *inStrPtr)
-{
-	DWORD sn = ExpandEnvironmentStringsW(inStrPtr, NULL, 0);
-	wchar_t *outStrPtr = (wchar_t*)calloc(sn + 2, sizeof(wchar_t));
-	ExpandEnvironmentStringsW(inStrPtr, outStrPtr, sn + 1);
-	// ensure the string is always safely NULL terminated
-	outStrPtr[sn+1] = L'\0';
-	return(outStrPtr);
-}
 int FlySwatterCrashAlert(const wchar_t *reportUrl, const wchar_t *miniDumpFilename, const LPFLYSWATTERPARAM params, const int params_len)
 {
-	MessageBox(NULL, L"Attach!", L"Attach!", MB_OK);
 	wchar_t *dumpPath = NULL;
 	wchar_t *dumpId = NULL;
 	wchar_t *pathStr = wcsdup(miniDumpFilename);
@@ -824,22 +803,6 @@ int FlySwatterCrashAlert(const wchar_t *reportUrl, const wchar_t *miniDumpFilena
 	// report will be returned in report_code.
 	// (Otherwise, report_code will be unchanged.)
 
-	// Prepare the report extra parameters list.
-	map<wstring, wstring> paramsStr;
-	paramsStr[L"FlySwatterVersion"] = _T(FLYSWATTER_VERSION_STRING);
-	paramsStr[L"FlySwatterCrashId"] = dumpId;
-
-	for(int i = 0; i < params_len; i++) {
-		if(params[i].name == NULL) {
-			// blank entry, just skip it.  We could probably break out of the loop but we won't do that since
-			// we may have a way to delete entries in the future
-			continue;
-		}
-		if(wcsncmp(params[i].name, L"FlySwatter_CrashAlertDialog_", wcslen(L"FlySwatter_CrashAlertDialog_")) == 0) {
-			// Parameters that start with FlySwatter_CrashAlertDialog_ are for use by the dialog display only
-			paramsStr[params[i].name] = params[i].value;
-		}
-	}
 	/// send the report
 	ReportResult rs;	
 	wstring reportCode;
@@ -870,7 +833,11 @@ int FlySwatterCrashAlert(const wchar_t *reportUrl, const wchar_t *miniDumpFilena
 		offset = next_offset;
 		next_offset = NULL;
 	}
-	rs = cs.SendCrashReport(reportUrl, paramsStr, miniDumpFilename, &reportCode);
+
+		// Prepare the report extra parameters list.
+	map<wstring, wstring> *paramsStr = CreateParamMap(params, params_len, dumpId, reportUrl);
+	rs = cs.SendCrashReport(reportUrl, (*paramsStr), miniDumpFilename, &reportCode);
+	DeleteParamMap(paramsStr);
 	free(tmpPtr);
 	int returnVal = 0;
 	if(dialogResult<1 || dialogResult>2) {

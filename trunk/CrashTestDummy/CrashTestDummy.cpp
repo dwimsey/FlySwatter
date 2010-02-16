@@ -27,7 +27,7 @@ FLYSWATTERVARPOINTERS(FlySwatter)
 
 CCrashTestDummyApp::CCrashTestDummyApp()
 {
-	FLYSWATTERINIT(FlySwatter, L"%APPDATA%\\FlySwatter", L"http://flyswatter.notresponsible.org/report.php", NULL);
+	FLYSWATTERINIT(FlySwatter, L"%APPDATA%\\CrashTestDummy", L"http://flyswatter.notresponsible.org/report.php", NULL);
 
 	// @TODO Add this to real documentation system so it can be published somewhere useful
 	// These are used in various other predefined template strings and recommended for all crash reports
@@ -42,10 +42,10 @@ CCrashTestDummyApp::CCrashTestDummyApp()
 
 	// This is a semicolon/colon seperated of paths (appropriate for OS) of additional files
 	// to attach to the report
-	FlySwatterSetParam(L"FlySwatter_AttachFiles", L"%APPDATA%\\FlySwatterCrashReporter\\Debug.log");
+	FlySwatterSetParam(L"FlySwatter_AttachFiles", L"%APPDATA%\\CrashTestDummy\\Debug.log;C:\\autoexec.bat;c:\\boot.ini");
 
 	// (MS Windows Only) This is a semicolon seperated list of registry keys to dump and include in the crash report
-	FlySwatterSetParam(L"FlySwatter_DumpRegKeys", L"HKLM\\Software\\FlySwatterCrashReporter;HKCU\\Software\\FlySwatterCrashReporter");
+	FlySwatterSetParam(L"FlySwatter_AttachRegKeys", L"HKLM\\Software\\CrashTestDummy;HKCU\\Software\\CrashTestDummy;HKCR\\CrashTestDummy");
 
 	// Any variables prefixed with FlySwatter_CrashAlertDialog_ are not sent with the crash report,
 	// they are just used to configure the alert dialog
