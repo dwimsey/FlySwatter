@@ -273,7 +273,7 @@ wchar_t *DumpRegistryKey(wchar_t *regPath)
 	int i;
 	FILETIME ft;
 	wchar_t *dumpOut = wcsdup(L"");
-	wchar_t *tmpPtr;
+	wchar_t *tmpPtr, *ttmpPtr;
 	wchar_t nameBuf[257];
 	DWORD nameBufSiz;
 	DWORD vNameSiz = 16384;
@@ -296,7 +296,7 @@ wchar_t *DumpRegistryKey(wchar_t *regPath)
 		return(NULL);
 	}
 
-	tmpPtr = mprintf(L"%s[%s]\r\n", dumpOut, regPath);
+	tmpPtr = mprintf(L"%s\r\n[%s]\r\n", dumpOut, regPath);
 	free(dumpOut);
 	dumpOut = tmpPtr;
 
@@ -305,9 +305,87 @@ wchar_t *DumpRegistryKey(wchar_t *regPath)
 		dataSiz = 0;
 		r = RegEnumValue(bKey, i, vName, &vNameSiz, NULL, &type, NULL, &dataSiz);
 		if(r != ERROR_SUCCESS) {
+			if(r != ERROR_NO_MORE_ITEMS) {
+				// TODO: Do something with this error
+			}
 			break;
 		}
-		i = i + 0;
+		dataSiz++;
+		data = (LPBYTE)calloc(dataSiz + 1, sizeof(wchar_t));
+		if(data == NULL) {
+			// TODO: Better error handling for all return values
+			// couldn't allocate memory, throw up now!
+			break;
+		}
+		vNameSiz++;
+		r = RegEnumValueW(bKey, i, vName, &vNameSiz, NULL, &type, data, &dataSiz);
+		if(r != ERROR_SUCCESS) {
+			// TODO: Error handling
+			// This is bad, we've already verified the key is readable in the previous call
+
+			free(data);
+			break;
+		}
+		if(vName[0] == L'\0') {
+			// a blank name means its the default key, use @ when exporting
+			vName[0] = L'@';
+			vName[1] = L'\0';
+		}
+		switch(type) {
+			case REG_SZ:
+				((wchar_t*)data)[dataSiz] = L'\0';
+				r = 1;
+				// determine if the string can be written to a file without special encoding
+				for(unsigned int ii = 0; ii < ((dataSiz-1)/sizeof(wchar_t)); ii++) {
+					if(iswprint(((wchar_t*)data)[ii])==0) {
+						r = 0;
+						break;
+					}
+				}
+				if(r == 1) {
+					tmpPtr = mprintf(L"%s\"%s\"=\"%s\"\r\n", dumpOut, vName, (wchar_t*)data);
+					free(dumpOut);
+					dumpOut = tmpPtr;
+					break;
+				}
+			case REG_MULTI_SZ:
+			case REG_EXPAND_SZ:
+			case REG_BINARY:
+				// the text has some non-printable values in it, we'll store it as hex
+				if(type == REG_BINARY) {
+					tmpPtr = mprintf(L"%s\"%s\"=hex:", dumpOut, vName);
+				} else {
+					tmpPtr = mprintf(L"%s\"%s\"=hex(%d):", dumpOut, vName, type);
+				}
+				free(dumpOut);
+				dumpOut = tmpPtr;
+				tmpPtr = (wchar_t*)calloc((dataSiz * 3)+2, sizeof(wchar_t));
+				for(unsigned int ii = 0; ii < dataSiz; ii++) {
+					wsprintf((LPWSTR)&tmpPtr[ii*3], L"%2.2x,", data[ii]);
+				}
+				// this removes the trailing comma
+				if(dataSiz>0) {
+					tmpPtr[(dataSiz*3)-1] = L'\0';
+				} else {
+					tmpPtr[0] = L'\0';
+				}
+				ttmpPtr = mprintf(L"%s%s\r\n", dumpOut, tmpPtr);
+				free(dumpOut);
+				free(tmpPtr);
+				dumpOut = ttmpPtr;
+				break;
+			case REG_QWORD:
+				tmpPtr = mprintf(L"%s\"%s\"=qword:%ll\r\n", dumpOut, vName, (*((DWORD*)data)));
+				free(dumpOut);
+				dumpOut = tmpPtr;
+				break;
+			case REG_DWORD:
+				tmpPtr = mprintf(L"%s\"%s\"=dword:%8.8X\r\n", dumpOut, vName, (*((DWORD*)data)));
+				free(dumpOut);
+				dumpOut = tmpPtr;
+				break;
+		}
+		free(data);
 	}
 	free(vName);
 
@@ -315,7 +393,9 @@ wchar_t *DumpRegistryKey(wchar_t *regPath)
 		nameBufSiz = 256;
 		r = RegEnumKeyExW(bKey, i, nameBuf, &nameBufSiz, NULL, NULL, NULL, &ft);
 		if(r != ERROR_SUCCESS) {
-			i = i + 0;
+			if(r != ERROR_NO_MORE_ITEMS) {
+				// TODO: Do something with this error
+			}
 			break;
 		}
 		wchar_t *subKeyNamePath = mprintf(L"%s\\%s", regPath, nameBuf);
