@@ -63,30 +63,42 @@ FLYSWATTER_API int FlySwatterInit(wchar_t *dumpPath, wchar_t *reportUrl, wchar_t
 
 FLYSWATTER_API int FlySwatterEnable()
 {
-	if(lctx->handlerPtr == NULL) {
+	if(lctx == NULL) {
 		return(-1);
+	}
+	if(lctx->handlerPtr == NULL) {
+		return(-2);
 	}
 	return(InterlockedExchange((volatile LONG *)&lctx->enabled, 1));
 }
 
 FLYSWATTER_API int FlySwatterDisable()
 {
-	if(lctx->handlerPtr == NULL) {
+	if(lctx == NULL) {
 		return(-1);
+	}
+	if(lctx->handlerPtr == NULL) {
+		return(-2);
 	}
 	return(InterlockedExchange((volatile LONG *)&lctx->enabled, 0));
 }
 
 FLYSWATTER_API int FlySwatterIsEnabled()
 {
-	if(lctx->handlerPtr == NULL) {
+	if(lctx == NULL) {
 		return(-1);
+	}
+	if(lctx->handlerPtr == NULL) {
+		return(-2);
 	}
 	return(lctx->enabled);
 }
 
 FLYSWATTER_API void FlySwatterSetParam(const wchar_t *name, const wchar_t *value)
 {
+	if(lctx == NULL) {
+		return;
+	}
 	if(name == NULL) {
 		// can't do anything with this
 		return;
@@ -200,6 +212,9 @@ const wchar_t *FlySwatterGetParamEx(LPFLYSWATTERPARAM params, int params_len, co
 
 FLYSWATTER_API const wchar_t *FlySwatterGetParam(const wchar_t *name)
 {
+	if(lctx == NULL) {
+		return(NULL);
+	}
 	return(FlySwatterGetParamEx(lctx->params, lctx->params_len, name));
 }
 
@@ -224,16 +239,25 @@ bool FlySwatterMiniDumpCallback(const wchar_t *dumpPath, const wchar_t *dumpId, 
 	MessageBox(NULL, L"Attach!", L"Attach!", MB_OK);
 	LPFLYSWATTERCONTEXT ctx = (LPFLYSWATTERCONTEXT)mctx;
 	if(dumpSucceeded == false) {
-		return(false);
+	//	return(false);
 	}
 
 	wchar_t miniDumpFilename[1025];
-	_sntprintf(miniDumpFilename, 1023, L"%s\\%s.dmp", dumpPath, dumpId);
-	miniDumpFilename[1023] = L'\0';
-	FlySwatterCrashAlert(ctx->reportUrl, miniDumpFilename, ctx->params, ctx->params_len);
-	// the minidump should already be gone, but we're going to remove it again anyway to be safe
-	_wunlink(miniDumpFilename);
-
+	if(dumpSucceeded == true) {
+		if(dumpPath == NULL) {
+			dumpPath = L"";
+		}
+		if(dumpId == NULL) {
+			dumpId = L"";
+		}
+		_sntprintf(miniDumpFilename, 1023, L"%s\\%s.dmp", dumpPath, dumpId);
+		miniDumpFilename[1023] = L'\0';
+		FlySwatterCrashAlert(ctx->reportUrl, miniDumpFilename, ctx->params, ctx->params_len);
+		// the minidump should already be gone, but we're going to remove it again anyway to be safe
+		_wunlink(miniDumpFilename);
+	} else {
+		FlySwatterCrashAlert(ctx->reportUrl, NULL, ctx->params, ctx->params_len);
+	}
 // no need to relock it, we're going to die now anyway
 //	int rVal;
 //	DWORD bb;
@@ -251,7 +275,7 @@ bool FlySwatterMiniDumpCallback(const wchar_t *dumpPath, const wchar_t *dumpId, 
 // misc functions
 HKEY GetRootKeyHandleFromPathStr(const wchar_t *path)
 {
-	if(wcsnicmp(path, L"HKEY_CLASS_ROOT\\", 16)==0) {
+	if(wcsnicmp(path, L"HKEY_CLASSES_ROOT\\", 16)==0) {
 		return(HKEY_CLASSES_ROOT);
 	} else if(wcsnicmp(path, L"HKEY_CURRENT_USER\\", 18)==0) {
 		return(HKEY_CURRENT_USER);
@@ -272,7 +296,8 @@ wchar_t *DumpRegistryKey(wchar_t *regPath)
 	HKEY bKey;
 	int i;
 	FILETIME ft;
-	wchar_t *dumpOut = wcsdup(L"");
+	wchar_t *subKeyNamePath;
+	wchar_t *dumpOut;
 	wchar_t *tmpPtr, *ttmpPtr;
 	wchar_t nameBuf[257];
 	DWORD nameBufSiz;
@@ -285,21 +310,31 @@ wchar_t *DumpRegistryKey(wchar_t *regPath)
 	HKEY baseKey = GetRootKeyHandleFromPathStr(regPath);
 	wchar_t *baseSubKey = wcschr(regPath, L'\\');
 	baseSubKey++;
+	dumpOut = mprintf(L"\r\n[%s]\r\n", regPath);
+
 	if(baseKey == 0) {
 		// the path isn't properly formed, it doesn't contain a known base key
+		tmpPtr = mprintf(L"%s!!Error: Keyname is invalid, base keyname is unknown\r\n", dumpOut);
 		free(dumpOut);
-		return(NULL);
+		dumpOut = tmpPtr;
+		return(dumpOut);
 	}
 
-	if(RegOpenKeyW(baseKey, baseSubKey, &bKey) != ERROR_SUCCESS) {
+	r = RegOpenKeyW(baseKey, baseSubKey, &bKey);
+	if(r != ERROR_SUCCESS) {
+		tmpPtr = mprintf(L"%s!!Error: Could not open key: %d\r\n", dumpOut, r);
 		free(dumpOut);
-		return(NULL);
+		dumpOut = tmpPtr;
+		return(dumpOut);
 	}
 
-	tmpPtr = mprintf(L"%s\r\n[%s]\r\n", dumpOut, regPath);
-	free(dumpOut);
-	dumpOut = tmpPtr;
-
+	vName = (wchar_t*)calloc(vNameSiz + 1, sizeof(wchar_t));
+	if(vName == NULL) {
+		tmpPtr = mprintf(L"%s!!Error: Could allocate memory for name buffer.", dumpOut);
+		free(dumpOut);
+		dumpOut = tmpPtr;
+		return(dumpOut);
+	}
 	for(i = 0; ; i++) {
 		vNameSiz = 16384;
 		dataSiz = 0;
@@ -307,24 +342,30 @@ wchar_t *DumpRegistryKey(wchar_t *regPath)
 		if(r != ERROR_SUCCESS) {
 			if(r != ERROR_NO_MORE_ITEMS) {
 				// TODO: Do something with this error
+				tmpPtr = mprintf(L"%s!!Error: Could not enumerate value: %d: Index: %d\r\n", dumpOut, r, i);
+				free(dumpOut);
+				dumpOut = tmpPtr;
 			}
 			break;
 		}
 		dataSiz++;
+		// this really should be char instead of wchar_t, but this gives us plenty of overrun space
 		data = (LPBYTE)calloc(dataSiz + 1, sizeof(wchar_t));
 		if(data == NULL) {
-			// TODO: Better error handling for all return values
-			// couldn't allocate memory, throw up now!
+			// couldn't allocate the memory for the data stored, log this condition and skip to the next
+			tmpPtr = mprintf(L"%s\"%s\"=hex(%d):!!Error: Could allocate memory for data buffer, %d bytes requested.", dumpOut, vName, type, (dataSiz + 1 * sizeof(wchar_t)));
+			free(dumpOut);
+			dumpOut = tmpPtr;
 			break;
 		}
 		vNameSiz++;
 		r = RegEnumValueW(bKey, i, vName, &vNameSiz, NULL, &type, data, &dataSiz);
 		if(r != ERROR_SUCCESS) {
-			// TODO: Error handling
-			// This is bad, we've already verified the key is readable in the previous call
-
+			tmpPtr = mprintf(L"%s!!Error: Could not enumerate value: %d: Index: %d Name: %s\r\n", dumpOut, r, i, vName);
+			free(dumpOut);
+			dumpOut = tmpPtr;
 			free(data);
-			break;
+			continue;
 		}
 		if(vName[0] == L'\0') {
 			// a blank name means its the default key, use @ when exporting
@@ -360,6 +401,13 @@ wchar_t *DumpRegistryKey(wchar_t *regPath)
 				free(dumpOut);
 				dumpOut = tmpPtr;
 				tmpPtr = (wchar_t*)calloc((dataSiz * 3)+2, sizeof(wchar_t));
+				if(tmpPtr == NULL) {
+					// couldn't allocate space for hex encoded output buffer
+					tmpPtr = mprintf(L"%s!!Error: Could not allocate buffer for hex encoded output: %s Size: %d", dumpOut, vName, ((dataSiz * 3)+2 * sizeof(wchar_t)));
+					free(dumpOut);
+					dumpOut = tmpPtr;
+					break;
+				}
 				for(unsigned int ii = 0; ii < dataSiz; ii++) {
 					wsprintf((LPWSTR)&tmpPtr[ii*3], L"%2.2x,", data[ii]);
 				}
@@ -395,10 +443,13 @@ wchar_t *DumpRegistryKey(wchar_t *regPath)
 		if(r != ERROR_SUCCESS) {
 			if(r != ERROR_NO_MORE_ITEMS) {
 				// TODO: Do something with this error
+				tmpPtr = mprintf(L"%s!!Error: Could not enumerate subkeys: %d: Index: %d\r\n", dumpOut, r, i);
+				free(dumpOut);
+				dumpOut = tmpPtr;
 			}
 			break;
 		}
-		wchar_t *subKeyNamePath = mprintf(L"%s\\%s", regPath, nameBuf);
+		subKeyNamePath = mprintf(L"%s\\%s", regPath, nameBuf);
 		tmpPtr = DumpRegistryKey(subKeyNamePath);
 		free(subKeyNamePath);
 		if(tmpPtr != NULL) {
@@ -409,8 +460,6 @@ wchar_t *DumpRegistryKey(wchar_t *regPath)
 			dumpOut = tt;
 		}
 	}
-
-
 	RegCloseKey(bKey);
 	return(dumpOut);
 }
@@ -428,12 +477,20 @@ void DeleteParamMap(map<wstring, wstring> *oldMap)
 map<wstring, wstring> *CreateParamMap(const LPFLYSWATTERPARAM params, const int params_len, const wchar_t *dumpId, const wchar_t *reportUrl)
 {
 	map<wstring, wstring> *paramsStr = new map<wstring, wstring>;
+	if(paramsStr == NULL) {
+		return(NULL);
+	}
 	(*paramsStr)[L"FlySwatterVersion"] = _T(FLYSWATTER_VERSION_STRING);
 	(*paramsStr)[L"FlySwatterCrashId"] = dumpId;
 	(*paramsStr)[L"FlySwatterReportURL"] = reportUrl;
 
 	for(int i = 0; i < params_len; i++) {
 		if(params[i].name == NULL) {
+			// blank entry, just skip it.  We could probably break out of the loop but we won't do that since
+			// we may have a way to delete entries in the future
+			continue;
+		}
+		if(params[i].name[0] == L'\0') {
 			// blank entry, just skip it.  We could probably break out of the loop but we won't do that since
 			// we may have a way to delete entries in the future
 			continue;
@@ -477,13 +534,21 @@ map<wstring, wstring> *CreateParamMap(const LPFLYSWATTERPARAM params, const int 
 						if(wcslen(fnameBuf) > 0) {
 							fp = _wfopen(fnameBuf, L"rb");
 							if(fp == NULL) {
-								outBuf = mprintf(L"%s;%d;%s", fnameBuf, -2, L"File could not be opened for reading");
+								outBuf = mprintf(L"%s;%d;%s", fnameBuf, -2, L"File could not be opened for reading: %d", _errno());
 							} else {
 								outBuf = wcsdup(L"");
-								while(1) {
+								while(!feof(fp)) {
 									// loop through the file reading in the data and adding it to the base64 encoded output
 									fr = fread(&inBuf, 1, 512, fp);
+									int fen = ferror(fp);
+									if(fen != 0) {
+										tb = outBuf;
+										outBuf = mprintf(L"%sCould not read from file: %d", tb, _errno());
+										free(tb);
+										break;
+									}
 									if(fr == 0) {
+										// this shouldn't ever happen, but just in case
 										break;
 									}
 									fSize += fr;
@@ -521,15 +586,24 @@ map<wstring, wstring> *CreateParamMap(const LPFLYSWATTERPARAM params, const int 
 						if(wcslen(fnameBuf) > 0) {
 							fp = _wfopen(fnameBuf, L"rb");
 							if(fp == NULL) {
-								outBuf = mprintf(L"%s;%d;%s", fnameBuf, -2, L"File could not be opened for reading");
+								outBuf = mprintf(L"%s;-2;%s", fnameBuf, L"File could not be opened for reading: %d.", _errno());
 							} else {
 								outBuf = wcsdup(L"");
-								while(1) {
+								while(!feof(fp)) {
 									// loop through the file reading in the data and adding it to the base64 encoded output
 									fr = fread(&inBuf, 1, 512, fp);
-									if(fr == 0) {
+									int fen = ferror(fp);
+									if(fen != 0) {
+										tb = outBuf;
+										outBuf = mprintf(L"%sCould not read from file: %d", tb, _errno());
+										free(tb);
 										break;
 									}
+									if(fr == 0) {
+										// this shouldn't ever happen, but just in case
+										break;
+									}
+
 									fSize += fr;
 									encodedStr = base64encode(inBuf, fr, -1);
 									encSize = strlen((const char *)encodedStr) + 1;
