@@ -732,31 +732,35 @@ int FlySwatterCrashAlert(const wchar_t *reportUrl, const wchar_t *miniDumpFilena
 {
 	wchar_t *dumpPath = NULL;
 	wchar_t *dumpId = NULL;
-	wchar_t *pathStr = wcsdup(miniDumpFilename);
-	wchar_t *pathStrSPtr = wcsrchr(pathStr, L'\\');
-	wchar_t *pathStrPtr = wcsrchr(pathStr, L'/');
-	if(pathStrSPtr > pathStrPtr) {
-		pathStrPtr = pathStrSPtr;
-	}
+	
 
-	if(pathStrPtr != NULL) {
-		pathStrPtr[0] = L'\0';
-		if(pathStrPtr[1] != L'\0') {
-			pathStrPtr++;
-		} else {
-			pathStrPtr = NULL;
+	if(miniDumpFilename != NULL) {
+		wchar_t *pathStr = wcsdup(miniDumpFilename);
+		wchar_t *pathStrSPtr = wcsrchr(pathStr, L'\\');
+		wchar_t *pathStrPtr = wcsrchr(pathStr, L'/');
+		if(pathStrSPtr > pathStrPtr) {
+			pathStrPtr = pathStrSPtr;
 		}
-	}
 
-	if(pathStrPtr != NULL) {
-		dumpPath = wcsdup(pathStr);
-		wchar_t *extPtr = wcsrchr(pathStrPtr, L'.');
-		if(extPtr != NULL) {
-			extPtr[0] = L'\0';
+		if(pathStrPtr != NULL) {
+			pathStrPtr[0] = L'\0';
+			if(pathStrPtr[1] != L'\0') {
+				pathStrPtr++;
+			} else {
+				pathStrPtr = NULL;
+			}
 		}
-		dumpId = wcsdup(pathStrPtr);
+
+		if(pathStrPtr != NULL) {
+			dumpPath = wcsdup(pathStr);
+			wchar_t *extPtr = wcsrchr(pathStrPtr, L'.');
+			if(extPtr != NULL) {
+				extPtr[0] = L'\0';
+			}
+			dumpId = wcsdup(pathStrPtr);
+		}
+		free(pathStr);
 	}
-	free(pathStr);
 
 	// display the dump info to the user and allow them to determine if they want to send a crash report
 	FLYSWATTERCRASHALERTDIALOGINITDATA idData;
