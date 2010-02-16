@@ -251,24 +251,88 @@ bool FlySwatterMiniDumpCallback(const wchar_t *dumpPath, const wchar_t *dumpId, 
 // misc functions
 HKEY GetRootKeyHandleFromPathStr(const wchar_t *path)
 {
-	if(wcsnicmp(path, L"HKCR\\", 5)==0) {
+	if(wcsnicmp(path, L"HKEY_CLASS_ROOT\\", 16)==0) {
 		return(HKEY_CLASSES_ROOT);
-	} else if(wcsnicmp(path, L"HKCU\\", 5)==0) {
+	} else if(wcsnicmp(path, L"HKEY_CURRENT_USER\\", 18)==0) {
 		return(HKEY_CURRENT_USER);
-	} else if(wcsnicmp(path, L"HKLM\\", 5)==0) {
+	} else if(wcsnicmp(path, L"HKEY_LOCAL_MACHINE\\", 19)==0) {
 		return(HKEY_LOCAL_MACHINE);
-	} else if(wcsnicmp(path, L"HKCC\\", 5)==0) {
+	} else if(wcsnicmp(path, L"HKEY_CURRENT_CONFIG\\", 20)==0) {
 		return(HKEY_CURRENT_CONFIG);
-//	} else if(wcsnicmp(fnameBuf, L"HKCC\\", 5)==0) {
+//	} else if(wcsnicmp(fnameBuf, L"HKEY_USERS\\", 5)==0) {
 //		return(HKEY_USERS);
 	} else {
 		return(0);
 	}
 }
 
-wchar_t *DumpRegistryKey(const HKEY regPath)
+
+wchar_t *DumpRegistryKey(wchar_t *regPath)
 {
-	return(NULL);
+	HKEY bKey;
+	int i;
+	FILETIME ft;
+	wchar_t *dumpOut = wcsdup(L"");
+	wchar_t *tmpPtr;
+	wchar_t nameBuf[257];
+	DWORD nameBufSiz;
+	DWORD vNameSiz = 16384;
+	wchar_t *vName = (wchar_t*)calloc(vNameSiz + 1, sizeof(wchar_t));
+	DWORD dataSiz;
+	LPBYTE data;
+	DWORD type;
+	LRESULT r;
+	HKEY baseKey = GetRootKeyHandleFromPathStr(regPath);
+	wchar_t *baseSubKey = wcschr(regPath, L'\\');
+	baseSubKey++;
+	if(baseKey == 0) {
+		// the path isn't properly formed, it doesn't contain a known base key
+		free(dumpOut);
+		return(NULL);
+	}
+
+	if(RegOpenKeyW(baseKey, baseSubKey, &bKey) != ERROR_SUCCESS) {
+		free(dumpOut);
+		return(NULL);
+	}
+
+	tmpPtr = mprintf(L"%s[%s]\r\n", dumpOut, regPath);
+	free(dumpOut);
+	dumpOut = tmpPtr;
+
+	for(i = 0; ; i++) {
+		vNameSiz = 16384;
+		dataSiz = 0;
+		r = RegEnumValue(bKey, i, vName, &vNameSiz, NULL, &type, NULL, &dataSiz);
+		if(r != ERROR_SUCCESS) {
+			break;
+		}
+		i = i + 0;
+	}
+	free(vName);
+
+	for(i = 0; ; i++) {
+		nameBufSiz = 256;
+		r = RegEnumKeyExW(bKey, i, nameBuf, &nameBufSiz, NULL, NULL, NULL, &ft);
+		if(r != ERROR_SUCCESS) {
+			i = i + 0;
+			break;
+		}
+		wchar_t *subKeyNamePath = mprintf(L"%s\\%s", regPath, nameBuf);
+		tmpPtr = DumpRegistryKey(subKeyNamePath);
+		free(subKeyNamePath);
+		if(tmpPtr != NULL) {
+			wchar_t *tt;
+			tt = mprintf(L"%s%s", dumpOut, tmpPtr);
+			free(tmpPtr);
+			free(dumpOut);
+			dumpOut = tt;
+		}
+	}
+
+
+	RegCloseKey(bKey);
+	return(dumpOut);
 }
 
 // used to delete the map created by CreateParamMap
@@ -433,14 +497,12 @@ map<wstring, wstring> *CreateParamMap(const LPFLYSWATTERPARAM params, const int 
 						if(wcslen(fnameBuf) < 5) {
 							outBuf = wcsdup(L"Registry path too short;-1;");
 						} else {
-							HKEY bKey;
-							if(RegOpenKeyW(GetRootKeyHandleFromPathStr(fnameBuf), (wchar_t*)&fnameBuf[5], &bKey) == ERROR_SUCCESS) {
-								tb = DumpRegistryKey(bKey);
-								RegCloseKey(bKey);
+							tb = DumpRegistryKey(fnameBuf);
+							if(tb != NULL) {
 								outBuf = mprintf(L"%s;%s", fnameBuf, tb);
 								free(tb);
 							} else {
-								outBuf = mprintf(L"%s;Registry not open registry key", fnameBuf);
+								outBuf = mprintf(L"%s;Could not open registry key", fnameBuf);
 							}
 						}
 						wsprintf(nameBuf, L"FlySwatter_AttachRegKeys_%d", iCount);
@@ -458,14 +520,12 @@ map<wstring, wstring> *CreateParamMap(const LPFLYSWATTERPARAM params, const int 
 						if(wcslen(fnameBuf) < 5) {
 							outBuf = wcsdup(L"Registry path too short;-1;");
 						} else {
-							HKEY bKey;
-							if(RegOpenKeyW(GetRootKeyHandleFromPathStr(fnameBuf), (wchar_t*)&fnameBuf[5], &bKey) == ERROR_SUCCESS) {
-								tb = DumpRegistryKey(bKey);
-								RegCloseKey(bKey);
+							tb = DumpRegistryKey(fnameBuf);
+							if(tb != NULL) {
 								outBuf = mprintf(L"%s;%s", fnameBuf, tb);
 								free(tb);
 							} else {
-								outBuf = mprintf(L"%s;Registry not open registry key", fnameBuf);
+								outBuf = mprintf(L"%s;Could not open registry key", fnameBuf);
 							}
 						}
 						wsprintf(nameBuf, L"FlySwatter_AttachRegKeys_%d", iCount);

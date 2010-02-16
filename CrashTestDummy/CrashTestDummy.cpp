@@ -45,7 +45,7 @@ CCrashTestDummyApp::CCrashTestDummyApp()
 	FlySwatterSetParam(L"FlySwatter_AttachFiles", L"%APPDATA%\\CrashTestDummy\\Debug.log;C:\\autoexec.bat;c:\\boot.ini");
 
 	// (MS Windows Only) This is a semicolon seperated list of registry keys to dump and include in the crash report
-	FlySwatterSetParam(L"FlySwatter_AttachRegKeys", L"HKLM\\Software\\CrashTestDummy;HKCU\\Software\\CrashTestDummy;HKCR\\CrashTestDummy");
+	FlySwatterSetParam(L"FlySwatter_AttachRegKeys", L"HKEY_LOCAL_MACHINE\\Software\\CrashTestDummy;HKEY_CURRENT_USER\\Software\\CrashTestDummy;HKEY_CLASSES_ROOT\\CrashTestDummy");
 
 	// Any variables prefixed with FlySwatter_CrashAlertDialog_ are not sent with the crash report,
 	// they are just used to configure the alert dialog
