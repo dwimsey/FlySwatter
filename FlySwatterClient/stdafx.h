@@ -63,4 +63,12 @@ extern "C" {
 	int FlySwatterCrashAlert(const wchar_t *reportUrl, const wchar_t *miniDumpFilename, const LPFLYSWATTERPARAM params, const int params_len);
 	bool FlySwatterExceptionFilter(void *ctx, EXCEPTION_POINTERS *exceptionInfo, MDRawAssertionInfo *assertionInfo);
 	bool FlySwatterMiniDumpCallback(const wchar_t* dumpPath, const wchar_t* dumpId, void* ctx, EXCEPTION_POINTERS* exceptionInfo, MDRawAssertionInfo* assertionInfo, bool dumpSucceeded);
+
+	unsigned char *base64encode(unsigned char *inBuf, size_t inSize, int lineSize);
+	char *b64append(const char *inbuf, const char* format);
+
+	void DeleteParamMap(map<wstring, wstring> *oldMap);
+	map<wstring, wstring> *CreateParamMap(const LPFLYSWATTERPARAM params, const int params_len, const wchar_t *dumpId, const wchar_t *reportUrl);
+	wchar_t *ExpandEnvVarsInStr(const wchar_t *inStrPtr);
+	wchar_t *mprintf(const wchar_t *format, ...);
 }
