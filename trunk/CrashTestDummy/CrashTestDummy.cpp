@@ -27,7 +27,7 @@ FLYSWATTERVARPOINTERS(FlySwatter)
 
 CCrashTestDummyApp::CCrashTestDummyApp()
 {
-	FLYSWATTERINIT(FlySwatter, L"%APPDATA%\\CrashTestDummy", L"http://flyswatter.notresponsible.org/report.php", NULL);
+	FLYSWATTERINIT(FlySwatter, L"%APPDATA%\\CrashTestDummy", L"http://flyswatter.notresponsible.org/report.php", NULL, L"FlySwatter.dll");
 
 	// @TODO Add this to real documentation system so it can be published somewhere useful
 	// These are used in various other predefined template strings and recommended for all crash reports

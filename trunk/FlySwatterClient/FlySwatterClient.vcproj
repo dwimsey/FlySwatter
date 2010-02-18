@@ -65,6 +65,7 @@
 				AdditionalDependencies="wininet.lib"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories=""
+				ModuleDefinitionFile="FlySwatter.def"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				TargetMachine="1"
@@ -140,6 +141,7 @@
 				AdditionalDependencies="wininet.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories=""
+				ModuleDefinitionFile="FlySwatter.def"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				OptimizeReferences="2"
@@ -217,6 +219,7 @@
 				AdditionalDependencies="wininet.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories=""
+				ModuleDefinitionFile="FlySwatter.def"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				OptimizeReferences="2"
@@ -294,6 +297,7 @@
 				AdditionalDependencies="wininet.lib"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories=""
+				ModuleDefinitionFile="FlySwatter.def"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				TargetMachine="1"
@@ -376,6 +380,10 @@
 						CompileAsManaged="0"
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\FlySwatter.def"
+				>
 			</File>
 			<File
 				RelativePath=".\FlySwatterClient.cpp"

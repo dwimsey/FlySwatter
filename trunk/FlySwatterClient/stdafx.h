@@ -36,7 +36,8 @@
 #ifndef FLYSWATTER_API
 //#if defined(_WIN32_WCE)
 	#ifdef FLYSWATTER_EXPORTS
-		#define FLYSWATTER_API __declspec(dllexport)
+//		#define FLYSWATTER_API __declspec(dllexport)
+		#define FLYSWATTER_API
 	#else
 		#define FLYSWATTER_API __declspec(dllimport)
 	#endif
@@ -47,22 +48,26 @@
 
 #include "client/windows/handler/exception_handler.h"
 #include "client/windows/sender/crash_report_sender.h"
+#include "client/windows/crash_generation/client_info.h"
+
 using namespace google_breakpad;
 
 #include "FlySwatterClient.h"
 
 extern "C" {
-	FLYSWATTER_API int FlySwatterInit(wchar_t *dump_path, wchar_t *reportUrl, wchar_t *OOPExePath);
-	FLYSWATTER_API int FlySwatterEnable();
-	FLYSWATTER_API int FlySwatterDisable();
-	FLYSWATTER_API int FlySwatterIsEnabled();
-	FLYSWATTER_API void FlySwatterSetParam(const wchar_t *name, const wchar_t *value);
-	FLYSWATTER_API const wchar_t *FlySwatterGetParam(const wchar_t *name);
+	FLYSWATTER_API int __stdcall FlySwatterInit(wchar_t *dump_path, wchar_t *reportUrl, wchar_t *OOPExePath);
+	FLYSWATTER_API int __stdcall FlySwatterInitServer(wchar_t *pipeName, wchar_t *reportUrl, wchar_t *dumpPath);
+	FLYSWATTER_API int __stdcall FlySwatterEnable();
+	FLYSWATTER_API int __stdcall FlySwatterDisable();
+	FLYSWATTER_API int __stdcall FlySwatterIsEnabled();
+	FLYSWATTER_API void __stdcall FlySwatterSetParam(const wchar_t *name, const wchar_t *value);
+	FLYSWATTER_API const wchar_t * __stdcall FlySwatterGetParam(const wchar_t *name);
 
 	// This are used internally and need to be available to all bits
 	int FlySwatterCrashAlert(const wchar_t *reportUrl, const wchar_t *miniDumpFilename, const LPFLYSWATTERPARAM params, const int params_len);
 	bool FlySwatterExceptionFilter(void *ctx, EXCEPTION_POINTERS *exceptionInfo, MDRawAssertionInfo *assertionInfo);
-	bool FlySwatterMiniDumpCallback(const wchar_t* dumpPath, const wchar_t* dumpId, void* ctx, EXCEPTION_POINTERS* exceptionInfo, MDRawAssertionInfo* assertionInfo, bool dumpSucceeded);
+	void FlySwatterOutOfProcessDumpCallback(void *dump_context, ClientInfo *client_info, const std::wstring *dump_path);
+	bool FlySwatterInProcessDumpCallback(const wchar_t* dumpPath, const wchar_t* dumpId, void* ctx, EXCEPTION_POINTERS* exceptionInfo, MDRawAssertionInfo* assertionInfo, bool dumpSucceeded);
 
 	unsigned char *base64encode(unsigned char *inBuf, size_t inSize, int lineSize);
 	char *b64append(const char *inbuf, const char* format);
