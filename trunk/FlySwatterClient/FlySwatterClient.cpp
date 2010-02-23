@@ -155,6 +155,8 @@ FLYSWATTER_API int __stdcall FlySwatterInit(wchar_t *dumpPath, wchar_t *reportUr
 	} else {
 		lctx->handlerPtr = new ExceptionHandler((wchar_t*)&lctx->dumpPath, FlySwatterExceptionFilter, FlySwatterInProcessDumpCallback, lctx, ExceptionHandler::HANDLER_ALL);
 	}
+	// for now we enable at init automatically.  This allows us to catch the earliest possible crash, even in our own code possibly.
+	lctx->enabled = 1;
 	return((lctx->handlerPtr == NULL ? 0 : 1));
 }
 
@@ -328,6 +330,9 @@ FLYSWATTER_API const wchar_t * __stdcall FlySwatterGetParam(const wchar_t *name)
 
 bool FlySwatterExceptionFilter(void *ctx, EXCEPTION_POINTERS *exceptionInfo, MDRawAssertionInfo *assertionInfo)
 {
+#ifdef _DEBUG
+	MessageBox(NULL, L"Attach!", L"Attach!", MB_OK);
+#endif
 	if(ctx == NULL) {
 		// this is a bad sign, a misconfiguration or a very corrupted stack, abort
 		MessageBox(NULL, L"An error occurred in the application which has caused it to crash.  An error report could not be generated.", L"An application error has occurred.", MB_OK);
@@ -349,10 +354,10 @@ void FlySwatterOutOfProcessDumpCallback(void *dump_context, ClientInfo *client_i
 
 bool FlySwatterInProcessDumpCallback(const wchar_t *dumpPath, const wchar_t *dumpId, void *mctx, EXCEPTION_POINTERS *exceptionInfo, MDRawAssertionInfo *assertionInfo, bool dumpSucceeded)
 {
-	MessageBox(NULL, L"Attach!", L"Attach!", MB_OK);
 	LPFLYSWATTERCONTEXT ctx = (LPFLYSWATTERCONTEXT)mctx;
 	if(dumpSucceeded == false) {
-	//	return(false);
+		// send the crash report even if a dump could not be created
+		// return(false);
 	}
 
 	wchar_t miniDumpFilename[1025];

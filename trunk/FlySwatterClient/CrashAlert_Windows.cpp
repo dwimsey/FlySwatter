@@ -732,7 +732,7 @@ int FlySwatterCrashAlert(const wchar_t *reportUrl, const wchar_t *miniDumpFilena
 {
 	wchar_t *dumpPath = NULL;
 	wchar_t *dumpId = NULL;
-	
+
 
 	if(miniDumpFilename != NULL) {
 		wchar_t *pathStr = wcsdup(miniDumpFilename);
