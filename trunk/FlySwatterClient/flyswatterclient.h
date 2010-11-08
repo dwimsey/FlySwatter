@@ -8,7 +8,7 @@ typedef struct __FlySwatterContextParameter {
 	wchar_t *value;
 } FLYSWATTERPARAM, *LPFLYSWATTERPARAM;
 
-typedef int (__stdcall *flyswatter_init_func_ptr)(wchar_t *dumpPath, wchar_t *reportUrl, wchar_t *OOPExePath);
+typedef int (__stdcall *flyswatter_initclient_func_ptr)(wchar_t *dumpPath, wchar_t *reportUrl, wchar_t *OOPExePath);
 typedef int (__stdcall *flyswatter_initserver_func_ptr)(wchar_t *pipeName, wchar_t *reportUrl);
 typedef int (__stdcall *flyswatter_enable_func_ptr)();
 typedef int (__stdcall *flyswatter_disable_func_ptr)();
@@ -21,7 +21,7 @@ typedef const wchar_t *(__stdcall *flyswatter_getparam_func_ptr)(const wchar_t *
 #define FLYSWATTERVARPOINTERS(BASENAME) \
 	HMODULE BASENAME ## LibraryHandle = NULL; \
 	extern "C" { \
-		flyswatter_init_func_ptr BASENAME ## Init; \
+		flyswatter_initclient_func_ptr BASENAME ## InitClient; \
 		flyswatter_initserver_func_ptr BASENAME ## InitServer; \
 		flyswatter_enable_func_ptr BASENAME ## Enable; \
 		flyswatter_disable_func_ptr BASENAME ## Disable; \
@@ -31,12 +31,12 @@ typedef const wchar_t *(__stdcall *flyswatter_getparam_func_ptr)(const wchar_t *
 		flyswatter_getparam_func_ptr BASENAME ## GetParam; \
 	} \
 
-#define FLYSWATTERINIT(RVAL, BASENAME, DUMPPATH, REPORTURL, OOP_EXE_PATH, DLLPATH) \
+#define FLYSWATTERLOADLIBRARY(RVAL, BASENAME, DLLPATH) \
 	BASENAME ## LibraryHandle = LoadLibrary(DLLPATH); \
 	if(BASENAME ## LibraryHandle == NULL) { \
 		RVAL = -101; \
 	} else { \
-		BASENAME ## Init = (flyswatter_init_func_ptr)GetProcAddress(BASENAME ## LibraryHandle, "FlySwatterInit"); \
+		BASENAME ## InitClient = (flyswatter_init_func_ptr)GetProcAddress(BASENAME ## LibraryHandle, "FlySwatterInitClient"); \
 		if(BASENAME ## Init == NULL) { \
 			RVAL = -102; \
 		} \
@@ -64,24 +64,12 @@ typedef const wchar_t *(__stdcall *flyswatter_getparam_func_ptr)(const wchar_t *
 		if(BASENAME ## GetParam == NULL) { \
 			RVAL = -108; \
 		} \
-		\
-		RVAL = BASENAME ## Init(DUMPPATH, REPORTURL, OOP_EXE_PATH); \
 	}
 
-#define FLYSWATTERINITSERVER(BASENAME, PIPENAME, REPORTURL, DLLPATH) \
-	BASENAME ## LibraryHandle = LoadLibrary(DLLPATH); \
-	if(BASENAME ## LibraryHandle == NULL) { \
-		MessageBox(NULL, _T("Could not load FlySwatter.dll"), _T("Initialization Error"), MB_OK); \
-		exit(255); \
-	} \
-	BASENAME ## Init = (flyswatter_init_func_ptr)GetProcAddress(BASENAME ## LibraryHandle, "FlySwatterInit"); \
-	BASENAME ## InitServer = (flyswatter_initserver_func_ptr)GetProcAddress(BASENAME ## LibraryHandle, "FlySwatterInitServer"); \
-	BASENAME ## Enable = (flyswatter_enable_func_ptr)GetProcAddress(BASENAME ## LibraryHandle, "FlySwatterEnable"); \
-	BASENAME ## Disable = (flyswatter_disable_func_ptr)GetProcAddress(BASENAME ## LibraryHandle, "FlySwatterDisable"); \
-	BASENAME ## IsEnabled = (flyswatter_isenabled_func_ptr)GetProcAddress(BASENAME ## LibraryHandle, "FlySwatterIsEnabled"); \
-	BASENAME ## SetParam = (flyswatter_setparam_func_ptr)GetProcAddress(BASENAME ## LibraryHandle, "FlySwatterSetParam"); \
-	BASENAME ## GetParam = (flyswatter_getparam_func_ptr)GetProcAddress(BASENAME ## LibraryHandle, "FlySwatterGetParam"); \
-	\
-	BASENAME ## InitServer(PIPENAME, REPORTURL); \
+#define FLYSWATTERINITCLIENT(RVAL, BASENAME, DUMPPATH, REPORTURL, OOP_EXE_PATH, DLLPATH) \
+	FLYSWATTERDECLARE(RVAL, BASENAME, DLLPATH) \
+	if(BASENAME ## LibraryHandle != NULL) { \
+		RVAL = BASENAME ## InitClient(DUMPPATH, REPORTURL, OOP_EXE_PATH); \
+	}
 
 #endif
