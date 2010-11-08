@@ -55,8 +55,9 @@ using namespace google_breakpad;
 #include "FlySwatterClient.h"
 
 extern "C" {
-	FLYSWATTER_API int __stdcall FlySwatterInit(wchar_t *dump_path, wchar_t *reportUrl, wchar_t *OOPExePath);
-	FLYSWATTER_API int __stdcall FlySwatterInitServer(wchar_t *pipeName, wchar_t *reportUrl, wchar_t *dumpPath);
+	FLYSWATTER_API int __stdcall FlySwatterInitClient(wchar_t *dump_path, wchar_t *reportUrl, wchar_t *OOPExePath);
+	FLYSWATTER_API void * __stdcall FlySwatterInitServer(wchar_t *pipeName, wchar_t *reportUrl, wchar_t *dumpPath);
+	FLYSWATTER_API bool __stdcall FlySwatterShutdownServer(void *serverContext);
 	FLYSWATTER_API int __stdcall FlySwatterEnable();
 	FLYSWATTER_API int __stdcall FlySwatterDisable();
 	FLYSWATTER_API int __stdcall FlySwatterIsEnabled();
