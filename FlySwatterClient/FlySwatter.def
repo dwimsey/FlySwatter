@@ -11,3 +11,4 @@ FlySwatterDisable=_FlySwatterDisable@0							@11
 FlySwatterEnable=_FlySwatterEnable@0							@12
 FlySwatterSetParam=_FlySwatterSetParam@8						@13
 FlySwatterGetParam=_FlySwatterGetParam@4						@14
+FlySwatterTriggerReport=_FlySwatterTriggerReport@0				@15

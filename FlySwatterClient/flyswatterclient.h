@@ -16,6 +16,7 @@ typedef int (__stdcall *flyswatter_isenabled_func_ptr)();
 typedef int (__stdcall *flyswatter_crashalert_func_ptr)(const wchar_t *reportUrl, const wchar_t *miniDumpFilename, const LPFLYSWATTERPARAM params, const int params_len);
 typedef void (__stdcall *flyswatter_setparam_func_ptr)(const wchar_t *name, const wchar_t *value);
 typedef const wchar_t *(__stdcall *flyswatter_getparam_func_ptr)(const wchar_t *name);
+typedef void (__stdcall *flyswatter_triggerreport_func_ptr)(void);
 
 // These macros make initializing the crash handler easier
 #define FLYSWATTERVARPOINTERS(BASENAME) \
@@ -29,6 +30,7 @@ typedef const wchar_t *(__stdcall *flyswatter_getparam_func_ptr)(const wchar_t *
 		flyswatter_crashalert_func_ptr BASENAME ## CrashAlert; \
 		flyswatter_setparam_func_ptr BASENAME ## SetParam; \
 		flyswatter_getparam_func_ptr BASENAME ## GetParam; \
+		flyswatter_triggerreport_func_ptr BASENAME ## TriggerReport; \
 	} \
 
 #define FLYSWATTERLOADLIBRARY(RVAL, BASENAME, DLLPATH) \
@@ -63,6 +65,10 @@ typedef const wchar_t *(__stdcall *flyswatter_getparam_func_ptr)(const wchar_t *
 		BASENAME ## GetParam = (flyswatter_getparam_func_ptr)GetProcAddress(BASENAME ## LibraryHandle, "FlySwatterGetParam"); \
 		if(BASENAME ## GetParam == NULL) { \
 			RVAL = -108; \
+		} \
+		BASENAME ## TriggerReport = (flyswatter_triggerreport_func_ptr)GetProcAddress(BASENAME ## LibraryHandle, "FlySwatterTriggerReport"); \
+		if(BASENAME ## TriggerReport == NULL) { \
+			RVAL = -109; \
 		} \
 	}
 

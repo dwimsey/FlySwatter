@@ -22,22 +22,27 @@
 #define tstrdup _wcsdup
 #endif
 
+#define FLYSWATTERSERVERSTARTUPTIMEOUT	20000
 #define MESSAGE_BUFFER_LEN	(1<<20)
 #define MAX_PATH_LEN	(1<<15)
 #define SAFE_MAX_PATH	(32000)
-
+#define RUNDLL32_PATH	L"%SystemRoot%\\System32\\rundll32.exe"
+#define FLYSWATTER_LIBRARY_BINARY_NAME	L"FlySwatter.dll"
 typedef struct __FlySwatterContextData {
 	volatile int enabled;
 	wchar_t *reportUrl;
-	//CrashReportSender *reportSender;
+	wchar_t *OOPServerExecutablePath;
 	ExceptionHandler *handlerPtr;
 	wchar_t dumpPath[MAX_PATH_LEN+3];
+	CustomClientInfo *ccInfo;
 	FLYSWATTERPARAM *params;
 	int params_len;
 } FLYSWATTERCONTEXT, *LPFLYSWATTERCONTEXT;
 
 typedef struct __FlySwatterServerContextData {
 	CrashGenerationServer *server;
+	wchar_t *reportUrl;
+	wchar_t dumpPath[MAX_PATH_LEN+3];
 } FLYSWATTERSERVERCONTEXT, *LPFLYSWATTERSERVERCONTEXT;
 
 LPFLYSWATTERCONTEXT lctx = NULL;
@@ -51,6 +56,8 @@ extern "C" __declspec (dllexport) void __cdecl FlySwatterRunDLLLaunchServerW(HWN
 	wchar_t *pipeName;
 	wchar_t *reportUrl;
 	wchar_t *dumpPath;
+
+		MessageBox(NULL, L"asd", L"OOPAttach!", MB_OK);
 
 	tt = wcsdup(lpCmdLine);
 		
@@ -127,7 +134,162 @@ extern "C" __declspec (dllexport) void __cdecl FlySwatterRunDLLLaunchServer(HWND
 
 // this function uses VirtualAlloc and VirtualProtect in an effort to secure the context structure against corruption
 // it won't always work, but its better than nothing.
- 
+
+bool AddExceptionHandler(LPFLYSWATTERCONTEXT clientContext)
+{
+	if(clientContext == NULL) {
+		return(false);
+	}
+	if(clientContext->handlerPtr != NULL) {
+		// a handler has already been installed, don't overlap it.
+		return(false);
+	}
+
+	wchar_t *tmpStr;
+	DWORD sRes;
+	wchar_t *fpath;
+	wchar_t *dllpath;
+	wchar_t pidstr[22];
+	wchar_t pipepathstr[50];
+	wchar_t eventpathstr[50];
+	wchar_t *pMessageBuffer;
+	DWORD pid;
+	HMODULE sModule;
+	int spawnErr;
+	int eNo;
+	HANDLE serverReadyEvent;
+
+	clientContext->ccInfo = new CustomClientInfo();
+	int realCount = 0;
+	for(int i = 0; i < clientContext->params_len; i++) {
+		if(clientContext->params[i].name != NULL) {
+			realCount++;
+		}
+	}
+
+	clientContext->ccInfo->count = realCount;
+	clientContext->ccInfo->entries = new CustomInfoEntry[realCount];
+	realCount = 0;
+	for(int i = 0; i < clientContext->params_len; i++) {
+		if(clientContext->params[i].name != NULL) {
+			wcsncpy((wchar_t*)&clientContext->ccInfo->entries[realCount].name, clientContext->params[i].name, min(wcslen(clientContext->params[i].name)+1, clientContext->ccInfo->entries[realCount].kNameMaxLength));
+			((wchar_t*)&clientContext->ccInfo->entries[realCount].name)[clientContext->ccInfo->entries[realCount].kNameMaxLength-1] = L'\0';
+			wcsncpy((wchar_t*)&clientContext->ccInfo->entries[realCount].value, clientContext->params[i].value, min(wcslen(clientContext->params[i].value)+1, clientContext->ccInfo->entries[realCount].kValueMaxLength));
+			((wchar_t*)&clientContext->ccInfo->entries[realCount].value)[clientContext->ccInfo->entries[realCount].kValueMaxLength-1] = L'\0';
+			realCount++;
+		}
+	}
+	
+	if(clientContext->OOPServerExecutablePath != NULL && wcslen(clientContext->OOPServerExecutablePath) > 0) {
+		// try out of process
+		if(wcscmp(clientContext->OOPServerExecutablePath, FLYSWATTER_LIBRARY_BINARY_NAME)==0) {
+			// try to use rundll to launch this DLL again as a server
+			tmpStr = ExpandEnvVarsInStr(RUNDLL32_PATH);
+			if(tmpStr == NULL) {
+				return(false);
+			}
+			fpath = (wchar_t*)malloc(sizeof(wchar_t)*(MAX_PATH_LEN+5));
+			if(fpath == NULL) {
+				return(false);
+			}
+			sRes = GetShortPathNameW(tmpStr, fpath, MAX_PATH_LEN);
+			free(tmpStr);
+
+			// Generate the pipe path
+			pid = GetCurrentProcessId();
+			wsprintf(pidstr, L"%d", pid);
+			wsprintf(pipepathstr, FSkPipeName, pid);
+			wsprintf(eventpathstr, FSkEventName, pid);
+
+			// Generate the server DLL path
+			sModule = GetModuleHandleW(L"FlySwatter");
+			if(sModule != NULL) {
+				pMessageBuffer = (wchar_t*)malloc((MESSAGE_BUFFER_LEN+5) * sizeof(wchar_t));
+				if(pMessageBuffer == NULL) {
+					free(fpath);
+					return(false);
+				}
+
+				GetModuleFileNameW(sModule, pMessageBuffer, MESSAGE_BUFFER_LEN);
+				tmpStr = (wchar_t*)malloc((MAX_PATH_LEN+5) * sizeof(wchar_t));
+				if(tmpStr == NULL) {
+					free(fpath);
+					free(pMessageBuffer);
+					return(false);
+				}
+
+				GetShortPathName(pMessageBuffer, tmpStr, MAX_PATH_LEN);
+				free(pMessageBuffer);
+				dllpath = (wchar_t*)malloc((wcslen(tmpStr) + strlen(",FlySwatterRunDLLLaunchServer") + 5) * sizeof(wchar_t));
+				if(dllpath == NULL) {
+					free(fpath);
+					free(tmpStr);
+					return(false);
+				}
+
+				wcscpy(dllpath, tmpStr);
+				free(tmpStr);
+				wcscat(dllpath, L",FlySwatterRunDLLLaunchServer");
+			} else {
+				// Our DLL has been renamed, but try the default anyway
+				dllpath = wcsdup(FLYSWATTER_LIBRARY_BINARY_NAME L",FlySwatterRunDLLLaunchServer");
+			}
+
+			// create an event for the server to use to signal ready
+			serverReadyEvent = ::CreateEventW(NULL, TRUE, FALSE, eventpathstr);
+			if(serverReadyEvent == NULL) {
+				MessageBox(NULL, eventpathstr, L"FlySwatter could not create server startup notification event.", MB_OK);
+				free(fpath);
+				free(dllpath);
+			} else {
+				spawnErr = _wspawnl(_P_DETACH, fpath, fpath, dllpath, pidstr, pipepathstr, clientContext->reportUrl, clientContext->dumpPath, eventpathstr, NULL);
+				eNo = *_errno();
+				free(fpath);
+				free(dllpath);
+				if(spawnErr < 0) {
+					MessageBox(NULL, pipepathstr, L"Could not initialized client pipe.", MB_OK);
+				} else {
+					// OOP Server was 'launched', now lets see if we can talk to it
+					// now we have to figure out a way to wait around for something to talk too, it shouldn't take long
+					// but we have to wait otherwise we'll try to connect before the server has actually started.
+					switch(WaitForSingleObject(serverReadyEvent, FLYSWATTERSERVERSTARTUPTIMEOUT)) {
+						case WAIT_OBJECT_0:
+							// the server has signaled it is ready for client connections
+							clientContext->handlerPtr = new ExceptionHandler((wchar_t*)&clientContext->dumpPath, FlySwatterExceptionFilter, FlySwatterInProcessDumpCallback, clientContext, ExceptionHandler::HANDLER_ALL, MiniDumpNormal, pipepathstr, clientContext->ccInfo);//custom_client_info_c);
+							CloseHandle(serverReadyEvent);
+							return(true);
+							break;
+						case WAIT_ABANDONED:
+							MessageBox(NULL, L"FlySwatter server could not be started, in process error reporting will be used.", L"", MB_OK);
+							break;
+						case WAIT_TIMEOUT:
+							MessageBox(NULL, L"FlySwatter server did not start in time, in process error reporting will be used.", L"", MB_OK);
+							break;
+						case WAIT_FAILED:
+							MessageBox(NULL, L"A system error occured waiting on the the FlySwatter server to become ready, in process error reporting will be used.", L"", MB_OK);
+							break;
+						default:
+							MessageBox(NULL, L"An unexpected error occured waiting on the the FlySwatter server to become ready, in process error reporting will be used.", L"", MB_OK);
+							break;
+					}
+				}
+				CloseHandle(serverReadyEvent);
+			}
+		}
+	}
+
+	if(clientContext->handlerPtr == NULL) {
+		// no crash CrashGenerationClient exists, so fall back to internal
+		// exception handling
+		clientContext->handlerPtr = new ExceptionHandler((wchar_t*)&clientContext->dumpPath, FlySwatterExceptionFilter, FlySwatterInProcessDumpCallback, clientContext, ExceptionHandler::HANDLER_ALL);
+	}
+	if(clientContext->handlerPtr != NULL) {
+		return(true);
+	} else {
+		return(false);
+	}
+}
+
 FLYSWATTER_API int __stdcall FlySwatterInitClient(wchar_t *dumpPath, wchar_t *reportUrl, wchar_t *OOPExePath)
 {
 	TCHAR *expandedDumpPath = NULL;
@@ -141,117 +303,42 @@ FLYSWATTER_API int __stdcall FlySwatterInitClient(wchar_t *dumpPath, wchar_t *re
 	// Allocate some memory that we can protect later, we want to do it at the top of the address space
 	// to put it as far away from the application as possible, this of course assumes that the heap is
 	// at the bottom of the address space
-	lctx = (LPFLYSWATTERCONTEXT)VirtualAlloc(NULL, sizeof(FLYSWATTERCONTEXT), MEM_COMMIT | MEM_RESERVE | MEM_TOP_DOWN, PAGE_READWRITE);
-	if(lctx == NULL) {
+	LPFLYSWATTERCONTEXT clientContext = (LPFLYSWATTERCONTEXT)VirtualAlloc(NULL, sizeof(FLYSWATTERCONTEXT), MEM_COMMIT | MEM_RESERVE | MEM_TOP_DOWN, PAGE_READWRITE);
+	if(clientContext == NULL) {
 		return(-2);
 	}
 	// We shouldn't need to do this as VirtualAlloc is supposed to do it
 	// But we do it anyway so we know where we stand, crash handlers need special care
-	SecureZeroMemory(lctx, sizeof(FLYSWATTERCONTEXT));
+	SecureZeroMemory(clientContext, sizeof(FLYSWATTERCONTEXT));
 
 	wchar_t *tmpStr;
 
 	// initialize the context with data based on our arguments
 	if(dumpPath == NULL) {
-		wcscpy((LPWSTR)&lctx->dumpPath, L".");
+		wcscpy((LPWSTR)&clientContext->dumpPath, L".");
 	} else {
-		ExpandEnvironmentStringsW(dumpPath, (LPTSTR)&lctx->dumpPath, MAX_PATH_LEN);
-		tmpStr = wcsdup((LPWSTR)&lctx->dumpPath);
-		GetShortPathName(tmpStr, (LPWSTR)&lctx->dumpPath, MAX_PATH_LEN);
+		ExpandEnvironmentStringsW(dumpPath, (LPTSTR)&clientContext->dumpPath, MAX_PATH_LEN);
+		tmpStr = wcsdup((LPWSTR)&clientContext->dumpPath);
+		GetShortPathName(tmpStr, (LPWSTR)&clientContext->dumpPath, MAX_PATH_LEN);
 		free(tmpStr);
-		lctx->dumpPath[MAX_PATH_LEN] = _T('\0');
-		lctx->dumpPath[MAX_PATH_LEN-1] = _T('\0');
+		clientContext->dumpPath[MAX_PATH_LEN] = _T('\0');
+		clientContext->dumpPath[MAX_PATH_LEN-1] = _T('\0');
 	}
-	lctx->reportUrl = wcsdup(reportUrl);
-	//lctx->reportSender = new CrashReportSender(_T(""));
+	clientContext->reportUrl = wcsdup(reportUrl);
+
 	// make sure the dump path exists if possible
-	_wmkdir(lctx->dumpPath);
+	_wmkdir(clientContext->dumpPath);
+
 	if(OOPExePath != NULL && wcslen(OOPExePath) > 0) {
-		// try out of process
-		if(wcscmp(OOPExePath, L"FlySwatter.dll")==0) {
-			// try to use rundll to launch this DLL again as a server
-			tmpStr = ExpandEnvVarsInStr(L"%SystemRoot%\\System32\\rundll32.exe");
-			wchar_t *fpath = (wchar_t*)malloc(sizeof(wchar_t)*(MAX_PATH_LEN+5));
-			DWORD sRes = GetShortPathNameW(tmpStr, fpath, MAX_PATH_LEN);
-			free(tmpStr);
-			wchar_t *dllpath;
-
-			// Generate the pipe path
-			wchar_t pidstr[22];
-			DWORD pid = GetCurrentProcessId();
-			wsprintf(pidstr, L"%d", pid);
-			wchar_t pipepathstr[50];
-			wsprintf(pipepathstr, FSkPipeName, pid);
-			wchar_t eventpathstr[50];
-			wsprintf(eventpathstr, FSkEventName, pid);
-
-			// Generate the server DLL path
-			HMODULE sModule = GetModuleHandleW(L"FlySwatter");
-			if(sModule != NULL) {
-				wchar_t *pMessageBuffer = (wchar_t*)malloc((MESSAGE_BUFFER_LEN+5) * sizeof(wchar_t));
-				GetModuleFileNameW(sModule, pMessageBuffer, MESSAGE_BUFFER_LEN);
-				tmpStr = (wchar_t*)malloc((MAX_PATH_LEN+5) * sizeof(wchar_t));
-				GetShortPathName(pMessageBuffer, tmpStr, MAX_PATH_LEN);
-				free(pMessageBuffer);
-				dllpath = (wchar_t*)malloc((wcslen(tmpStr) + strlen(",FlySwatterRunDLLLaunchServer") + 5) * sizeof(wchar_t));
-				wcscpy(dllpath, tmpStr);
-				free(tmpStr);
-				wcscat(dllpath, L",FlySwatterRunDLLLaunchServer");
-			} else {
-				// Our DLL has been renamed, but try the default anyway
-				dllpath = wcsdup(L"FlySwatter.dll,FlySwatterRunDLLLaunchServer");
-			}
-
-			// create an event for the server to use to signal ready
-			HANDLE serverReadyEvent = ::CreateEventW(NULL, TRUE, FALSE, eventpathstr);
-			if(serverReadyEvent == NULL) {
-				MessageBox(NULL, eventpathstr, L"FlySwatter could not create server startup notification event.", MB_OK);
-				free(fpath);
-				free(dllpath);
-			} else {
-				int spawnErr = _wspawnl(_P_DETACH, fpath, fpath, dllpath, pidstr, pipepathstr, lctx->reportUrl, lctx->dumpPath, eventpathstr, NULL);
-				int eNo = *_errno();
-				free(fpath);
-				free(dllpath);
-				if(spawnErr < 0) {
-					MessageBox(NULL, pipepathstr, L"Could not initialized client pipe.", MB_OK);
-				} else {
-					// OOP Server was 'launched', now lets see if we can talk to it
-					// now we have to figure out a way to wait around for something to talk too, it shouldn't take long
-					// but we have to wait otherwise we'll try to connect before the server has actually started.
-					switch(WaitForSingleObject(serverReadyEvent, 5000)) {
-						case WAIT_OBJECT_0:
-							// the server has signaled it is ready for client connections
-							lctx->handlerPtr = new ExceptionHandler((wchar_t*)&lctx->dumpPath, FlySwatterExceptionFilter, FlySwatterInProcessDumpCallback, lctx, ExceptionHandler::HANDLER_ALL, MiniDumpNormal, pipepathstr, NULL);//custom_client_info_c);
-							break;
-						case WAIT_ABANDONED:
-							MessageBox(NULL, L"FlySwatter server could not be started.", L"", MB_OK);
-							break;
-						case WAIT_TIMEOUT:
-							MessageBox(NULL, L"FlySwatter server did not start in time.", L"", MB_OK);
-							break;
-						case WAIT_FAILED:
-							MessageBox(NULL, L"An error occured waiting on the the FlySwatter server to become ready.", L"", MB_OK);
-							break;
-						default:
-							break;
-					}
-				}
-				CloseHandle(serverReadyEvent);
-			}
-		}
-	}
-
-	if(lctx->handlerPtr == NULL) {
-		// no crash CrashGenerationClient exists, so fall back to internal
-		// exception handling
-		lctx->handlerPtr = new ExceptionHandler((wchar_t*)&lctx->dumpPath, FlySwatterExceptionFilter, FlySwatterInProcessDumpCallback, lctx, ExceptionHandler::HANDLER_ALL);
+		clientContext->OOPServerExecutablePath = wcsdup(OOPExePath);
 	}
 	// for now we enable at init automatically.  This allows us to catch the earliest possible crash, even in our own code possibly.
-	lctx->params = NULL;
-	lctx->params_len = 0;
-	lctx->enabled = 1;
-	return((lctx->handlerPtr == NULL ? 0 : 1));
+	clientContext->params = NULL;
+	clientContext->params_len = 0;
+	clientContext->enabled = 0;
+
+	lctx = clientContext;
+	return(1);
 }
 
 #include "client/windows/crash_generation/crash_generation_server.h"
@@ -300,10 +387,11 @@ FLYSWATTER_API void * __stdcall FlySwatterInitServer(wchar_t *dumpPath, wchar_t 
 	// But we do it anyway so we know where we stand, crash handlers need special care
 	SecureZeroMemory(serverContext, sizeof(FLYSWATTERSERVERCONTEXT));
 
-	wstring rURL(reportUrl);
+	serverContext->reportUrl = wcsdup(reportUrl);
+
 	wstring rPipePath (pipeName);
 	wstring rDumpPath (dumpPath);
-	serverContext->server = new CrashGenerationServer(rPipePath, NULL, NULL, NULL, (google_breakpad::CrashGenerationServer::OnClientDumpRequestCallback)&FlySwatterOutOfProcessDumpCallback, NULL, NULL, NULL, true, &rDumpPath);
+	serverContext->server = new CrashGenerationServer(rPipePath, NULL, NULL, NULL, (google_breakpad::CrashGenerationServer::OnClientDumpRequestCallback)&FlySwatterOutOfProcessDumpCallback, serverContext, NULL, NULL, true, &rDumpPath);
 	if(serverContext->server->Start() != true) {
 		delete serverContext->server;
 		free(serverContext);
@@ -328,7 +416,9 @@ FLYSWATTER_API int __stdcall FlySwatterEnable()
 		return(-1);
 	}
 	if(lctx->handlerPtr == NULL) {
-		return(-2);
+		if(AddExceptionHandler(lctx)==0) {
+			return(-2);
+		}
 	}
 	return(InterlockedExchange((volatile LONG *)&lctx->enabled, 1));
 }
@@ -479,8 +569,20 @@ FLYSWATTER_API const wchar_t * __stdcall FlySwatterGetParam(const wchar_t *name)
 	return(FlySwatterGetParamEx(lctx->params, lctx->params_len, name));
 }
 
+FLYSWATTER_API void __stdcall FlySwatterTriggerReport()
+{
+	if(lctx == NULL) {
+		return;
+	}
+	if(lctx->handlerPtr == NULL) {
+		return;
+	}
+	lctx->handlerPtr->WriteMinidump();
+}
+
 bool FlySwatterExceptionFilter(void *ctx, EXCEPTION_POINTERS *exceptionInfo, MDRawAssertionInfo *assertionInfo)
 {
+	/// @TODO Verify what this exception filter is actually intended to do
 #ifdef _DEBUG
 	MessageBox(NULL, L"Attach!", L"Attach!", MB_OK);
 #endif
@@ -500,7 +602,32 @@ bool FlySwatterExceptionFilter(void *ctx, EXCEPTION_POINTERS *exceptionInfo, MDR
 
 void FlySwatterOutOfProcessDumpCallback(void *dump_context, ClientInfo *client_info, const std::wstring *dump_path)
 {
-	MessageBox(NULL, dump_path->c_str(), L"OOPAttach!", MB_OK);
+	LPFLYSWATTERSERVERCONTEXT serverContext = (LPFLYSWATTERSERVERCONTEXT)dump_context;
+	MessageBox(NULL, dump_path->c_str(), serverContext->reportUrl, MB_OK);
+	CustomClientInfo ccInfo = client_info->GetCustomInfo();
+	LPFLYSWATTERPARAM params;
+	if(ccInfo.count > 0) {
+		params = (LPFLYSWATTERPARAM)malloc(sizeof(FLYSWATTERPARAM) * ccInfo.count);
+		if(params == NULL) {
+			/// @TODO Handle this error in some way to let someone know it happened
+			return;
+		}
+		for(unsigned int i = 0; i < ccInfo.count; i++) {
+			params[i].name = (wchar_t*)&ccInfo.entries[i].name;
+			params[i].value = (wchar_t*)&ccInfo.entries[i].value;
+		}
+	} else {
+		params = NULL;
+	}
+
+	if(dump_path != NULL) {
+		const wchar_t *dPath = dump_path->c_str();
+		FlySwatterCrashAlert(serverContext->reportUrl, dPath, params, ccInfo.count);
+		_wunlink(dPath);
+	} else {
+		FlySwatterCrashAlert(serverContext->reportUrl, NULL, params, ccInfo.count);
+	}
+	free(params);
 }
 
 bool FlySwatterInProcessDumpCallback(const wchar_t *dumpPath, const wchar_t *dumpId, void *mctx, EXCEPTION_POINTERS *exceptionInfo, MDRawAssertionInfo *assertionInfo, bool dumpSucceeded)
@@ -511,36 +638,26 @@ bool FlySwatterInProcessDumpCallback(const wchar_t *dumpPath, const wchar_t *dum
 		// return(false);
 	}
 
+	if((dumpPath == NULL) && (dumpId == NULL) && (dumpSucceeded == true)) {
+		// this was handled out of process, we don't need to do anything here
+		return(true);
+	}
+
 	wchar_t miniDumpFilename[1025];
 	if(dumpSucceeded == true) {
-		if(dumpPath == NULL) {
-			dumpPath = L"";
+		if(dumpPath == NULL || dumpId == NULL) {
+			FlySwatterCrashAlert(ctx->reportUrl, NULL, ctx->params, ctx->params_len);
+		} else {
+			wsprintf(miniDumpFilename, L"%s\\%s.dmp", dumpPath, dumpId);
+			miniDumpFilename[1023] = L'\0';
+			FlySwatterCrashAlert(ctx->reportUrl, miniDumpFilename, ctx->params, ctx->params_len);
+			// the minidump should already be gone, but we're going to remove it again anyway to be safe
+			_wunlink(miniDumpFilename);
 		}
-		if(dumpId == NULL) {
-			dumpId = L"";
-		}
-		_sntprintf(miniDumpFilename, 1023, L"%s\\%s.dmp", dumpPath, dumpId);
-		miniDumpFilename[1023] = L'\0';
-		FlySwatterCrashAlert(ctx->reportUrl, miniDumpFilename, ctx->params, ctx->params_len);
-		// the minidump should already be gone, but we're going to remove it again anyway to be safe
-		_wunlink(miniDumpFilename);
 	} else {
 		FlySwatterCrashAlert(ctx->reportUrl, NULL, ctx->params, ctx->params_len);
 	}
-// no need to relock it, we're going to die now anyway
-//	int rVal;
-//	DWORD bb;
-//	rVal = VirtualProtect(lctx, sizeof(FLYSWATTERCONTEXT), PAGE_NOACCESS, &bb);
-//	if(rVal == 0) {
-//		rVal = GetLastError();
-//	}
-//	rVal = ((lctx->handlerPtr == NULL) ? 0 : 1);
 
-#ifdef WIN32
-	_exit(255);
-#else
-	exit(255);
-#endif
 	return(true);
 }
 
