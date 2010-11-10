@@ -757,39 +757,34 @@ map<wstring, wstring> *CreateParamMap(const LPFLYSWATTERPARAM params, const int 
 	(*paramsStr)[L"FlySwatterCrashId"] = dumpId;
 	(*paramsStr)[L"FlySwatterReportURL"] = reportUrl;
 
+	FILE *fp;
+	int iCount;
+	wchar_t *offset;
+	wchar_t nameBuf[64];
+	unsigned char inBuf[512];	// this is a char (not wchar_t) because its used for storing bytes of binary data
+	wchar_t *outBuf = NULL;
+	wchar_t *fnameBuf;
+	wchar_t *tfnameBuf;
+	unsigned char *encodedStr;
+	int encSize;
+	wchar_t *wencodedStr;
+	wchar_t *tb;
+	int fSize = 0;
+	int fr;
+
 	for(int i = 0; i < params_len; i++) {
 		if(params[i].name == NULL) {
 			// blank entry, just skip it.  We could probably break out of the loop but we won't do that since
 			// we may have a way to delete entries in the future
 			continue;
-		}
-		if(params[i].name[0] == L'\0') {
+		} else if(params[i].name[0] == L'\0') {
 			// blank entry, just skip it.  We could probably break out of the loop but we won't do that since
 			// we may have a way to delete entries in the future
 			continue;
-		}
-		if(wcsncmp(params[i].name, L"FlySwatter_CrashAlertDialog_", wcslen(L"FlySwatter_CrashAlertDialog_")) == 0) {
+		} else if(wcsncmp(params[i].name, L"FlySwatter_CrashAlertDialog_", wcslen(L"FlySwatter_CrashAlertDialog_")) == 0) {
 			// Parameters that start with FlySwatter_CrashAlertDialog_ are for use by the dialog display only
 			continue;
-		}
-		(*paramsStr)[params[i].name] = params[i].value;
-
-		FILE *fp;
-		int iCount;
-		wchar_t *offset;
-		wchar_t nameBuf[64];
-		unsigned char inBuf[512];	// this is a char (not wchar_t) because its used for storing bytes of binary data
-		wchar_t *outBuf = NULL;
-		wchar_t *fnameBuf;
-		wchar_t *tfnameBuf;
-		unsigned char *encodedStr;
-		int encSize;
-		wchar_t *wencodedStr;
-		wchar_t *tb;
-		int fSize = 0;
-		int fr;
-
-		if(wcscmp(params[i].name, L"FlySwatter_AttachFiles") == 0) {
+		} else if(wcscmp(params[i].name, L"FlySwatter_AttachFiles") == 0) {
 			// Add the files specified
 			if(params[i].value != NULL) {
 				if(wcslen(params[i].value)>0) {
@@ -906,9 +901,7 @@ map<wstring, wstring> *CreateParamMap(const LPFLYSWATTERPARAM params, const int 
 					free(tfnameBuf);
 				}
 			}
-		}
-
-		if(wcscmp(params[i].name, L"FlySwatter_AttachRegKeys") == 0) {
+		} else if(wcscmp(params[i].name, L"FlySwatter_AttachRegKeys") == 0) {
 			// Dump the specified registry keys and include them
 			if(params[i].value != NULL) {
 				if(wcslen(params[i].value)>0) {
@@ -966,6 +959,12 @@ map<wstring, wstring> *CreateParamMap(const LPFLYSWATTERPARAM params, const int 
 				}
 			}
 		}
+		
+		
+		
+		(*paramsStr)[params[i].name] = params[i].value;
+
+		
 	}
 	return(paramsStr);
 }
