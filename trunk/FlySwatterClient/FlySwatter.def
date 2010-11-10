@@ -1,9 +1,9 @@
 LIBRARY	"FlySwatter"
 EXPORTS
 FlySwatterInitClient=_FlySwatterInitClient@12					@1
-FlySwatterShutdownClient=_FlySwatterShutdownClient@12			@2
-FlySwatterInitServer=_FlySwatterInitServer@12					@3
-FlySwatterShutdownServer=_FlySwatterShutdownServer@12			@4
+FlySwatterShutdownClient=_FlySwatterShutdownClient@4			@2
+FlySwatterInitServer=_FlySwatterInitServer@16					@3
+FlySwatterShutdownServer=_FlySwatterShutdownServer@4			@4
 FlySwatterRunDLLLaunchServerW=FlySwatterRunDLLLaunchServerW		@5
 FlySwatterRunDLLLaunchServer=FlySwatterRunDLLLaunchServer		@6
 FlySwatterIsEnabled=_FlySwatterIsEnabled@0						@10
