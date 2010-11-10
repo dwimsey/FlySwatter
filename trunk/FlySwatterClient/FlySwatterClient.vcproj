@@ -21,7 +21,7 @@
 			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
 			IntermediateDirectory="$(ConfigurationName)"
 			ConfigurationType="2"
-			UseOfATL="1"
+			UseOfATL="0"
 			CharacterSet="1"
 			>
 			<Tool
@@ -46,7 +46,7 @@
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;_AFXDLL;FLYSWATTER_EXPORTS"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
-				RuntimeLibrary="3"
+				RuntimeLibrary="1"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				DebugInformationFormat="4"
@@ -121,7 +121,7 @@
 				EnableIntrinsicFunctions="true"
 				AdditionalIncludeDirectories="../breakpad/src/"
 				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;_AFXDLL;FLYSWATTER_EXPORTS"
-				RuntimeLibrary="2"
+				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
@@ -253,7 +253,7 @@
 			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
 			IntermediateDirectory="$(ConfigurationName)"
 			ConfigurationType="2"
-			UseOfATL="1"
+			UseOfATL="0"
 			CharacterSet="1"
 			>
 			<Tool
