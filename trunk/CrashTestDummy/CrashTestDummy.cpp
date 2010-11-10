@@ -24,6 +24,10 @@ END_MESSAGE_MAP()
 FLYSWATTERVARPOINTERS(FlySwatter)
 
 
+void DoManualReport(void *windowObject)
+{
+	FlySwatterTriggerReport();
+}
 
 CCrashTestDummyApp::CCrashTestDummyApp()
 {
@@ -78,6 +82,8 @@ CCrashTestDummyApp::CCrashTestDummyApp()
 	FlySwatterSetParam(L"FlySwatter_CrashAlertDialog_DontAskCheckbox", L"Don't ask me again!");
 
 	//	FlySwatterSetParam(L"FlySwatter_CrashAlertDialog_Info1Button", L"Don't ask me again!");
+
+	FlySwatterEnable();
 }
 
 

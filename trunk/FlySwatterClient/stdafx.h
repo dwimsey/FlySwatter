@@ -64,6 +64,7 @@ extern "C" {
 	FLYSWATTER_API int __stdcall FlySwatterIsEnabled();
 	FLYSWATTER_API void __stdcall FlySwatterSetParam(const wchar_t *name, const wchar_t *value);
 	FLYSWATTER_API const wchar_t * __stdcall FlySwatterGetParam(const wchar_t *name);
+	FLYSWATTER_API void __stdcall FlySwatterTriggerReport(void);
 
 	// This are used internally and need to be available to all bits
 	int FlySwatterCrashAlert(const wchar_t *reportUrl, const wchar_t *miniDumpFilename, const LPFLYSWATTERPARAM params, const int params_len);

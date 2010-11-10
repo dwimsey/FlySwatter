@@ -9,7 +9,6 @@
 #define new DEBUG_NEW
 #endif
 
-
 // CAboutDlg dialog used for App About
 
 class CAboutDlg : public CDialog
@@ -62,6 +61,7 @@ BEGIN_MESSAGE_MAP(CCrashTestDummyDlg, CDialog)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
 	//}}AFX_MSG_MAP
+	ON_BN_CLICKED(ID_BTN_MANUAL_REPORT, &CCrashTestDummyDlg::OnBnClickedManualReport)
 	ON_BN_CLICKED(IDOK, &CCrashTestDummyDlg::OnBnClickedOk)
 	ON_BN_CLICKED(IDCANCEL, &CCrashTestDummyDlg::OnBnClickedCancel)
 END_MESSAGE_MAP()
@@ -156,6 +156,14 @@ typedef struct __CrashTestDummy_DummyStruct {
 	float dummyFloat;
 	double dummyDouble;
 } CTD_DUMMYSTRUCT, *LPCTD_DUMMYSTRUCT;
+
+// DoManualReport is a simple wrapper function in CrashTestDummy.cpp to avoid needing all the includes in this file as well
+void DoManualReport(void *windowObject);
+void CCrashTestDummyDlg::OnBnClickedManualReport()
+{
+	// this just calls FlySwatterTriggerReport
+	DoManualReport(this);
+}
 
 void CCrashTestDummyDlg::OnBnClickedOk()
 {
