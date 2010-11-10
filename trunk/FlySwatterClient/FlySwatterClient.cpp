@@ -968,7 +968,7 @@ map<wstring, wstring> *CreateParamMap(const LPFLYSWATTERPARAM params, const int 
 						if(wcslen(fnameBuf) > 0) {
 							fp = _wfopen(fnameBuf, L"rb");
 							if(fp == NULL) {
-								outBuf = mprintf(L"%s;-2;%s", fnameBuf, L"File could not be opened for reading: %d.", _errno());
+								outBuf = mprintf(L"%s;-2;File could not be opened for reading: %d.", fnameBuf, _errno());
 							} else {
 								outBuf = wcsdup(L"");
 								while(!feof(fp)) {
