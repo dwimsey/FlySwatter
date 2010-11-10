@@ -57,8 +57,6 @@ extern "C" __declspec (dllexport) void __cdecl FlySwatterRunDLLLaunchServerW(HWN
 	wchar_t *reportUrl;
 	wchar_t *dumpPath;
 
-		MessageBox(NULL, L"asd", L"OOPAttach!", MB_OK);
-
 	tt = wcsdup(lpCmdLine);
 		
 	pidStr = tt;
@@ -582,10 +580,9 @@ FLYSWATTER_API void __stdcall FlySwatterTriggerReport()
 
 bool FlySwatterExceptionFilter(void *ctx, EXCEPTION_POINTERS *exceptionInfo, MDRawAssertionInfo *assertionInfo)
 {
-	/// @TODO Verify what this exception filter is actually intended to do
-#ifdef _DEBUG
-	MessageBox(NULL, L"Attach!", L"Attach!", MB_OK);
-#endif
+	// This filter determines if we have anything to do with catching the exception.  If we return true, the dump
+	// will be written and the dump callback called.  If we return false, the exception will be passed up the
+	// handler chain
 	if(ctx == NULL) {
 		// this is a bad sign, a misconfiguration or a very corrupted stack, abort
 		MessageBox(NULL, L"An error occurred in the application which has caused it to crash.  An error report could not be generated.", L"An application error has occurred.", MB_OK);
@@ -919,7 +916,7 @@ map<wstring, wstring> *CreateParamMap(const LPFLYSWATTERPARAM params, const int 
 						if(wcslen(fnameBuf) > 0) {
 							fp = _wfopen(fnameBuf, L"rb");
 							if(fp == NULL) {
-								outBuf = mprintf(L"%s;%d;%s", fnameBuf, -2, L"File could not be opened for reading: %d", _errno());
+								outBuf = mprintf(L"%s;-2;File could not be opened for reading: %d", fnameBuf, _errno());
 							} else {
 								outBuf = wcsdup(L"");
 								while(!feof(fp)) {
