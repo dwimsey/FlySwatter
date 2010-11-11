@@ -599,10 +599,10 @@ bool FlySwatterExceptionFilter(void *ctx, EXCEPTION_POINTERS *exceptionInfo, MDR
 
 void FlySwatterOutOfProcessDumpCallback(void *dump_context, ClientInfo *client_info, const std::wstring *dump_path)
 {
-	LPFLYSWATTERSERVERCONTEXT serverContext = (LPFLYSWATTERSERVERCONTEXT)dump_context;
-	MessageBox(NULL, dump_path->c_str(), serverContext->reportUrl, MB_OK);
-	CustomClientInfo ccInfo = client_info->GetCustomInfo();
 	LPFLYSWATTERPARAM params;
+	LPFLYSWATTERSERVERCONTEXT serverContext = (LPFLYSWATTERSERVERCONTEXT)dump_context;
+	CustomClientInfo ccInfo = client_info->GetCustomInfo();
+
 	if(ccInfo.count > 0) {
 		params = (LPFLYSWATTERPARAM)malloc(sizeof(FLYSWATTERPARAM) * ccInfo.count);
 		if(params == NULL) {
@@ -624,7 +624,9 @@ void FlySwatterOutOfProcessDumpCallback(void *dump_context, ClientInfo *client_i
 	} else {
 		FlySwatterCrashAlert(serverContext->reportUrl, NULL, params, ccInfo.count);
 	}
-	free(params);
+	if(params != NULL) {
+		free(params);
+	}
 }
 
 bool FlySwatterInProcessDumpCallback(const wchar_t *dumpPath, const wchar_t *dumpId, void *mctx, EXCEPTION_POINTERS *exceptionInfo, MDRawAssertionInfo *assertionInfo, bool dumpSucceeded)
