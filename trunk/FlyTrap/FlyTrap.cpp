@@ -11,7 +11,7 @@
  * @todo add metadata file type which will never be directly decrypted/decompressed, for storing future archive info
  */
 
-// FlySwatter.cpp : Defines the exported functions for the DLL application.
+// FlyTrap.cpp : Defines the exported functions for the DLL application.
 //
 
 #include "stdafx.h"
@@ -22,33 +22,33 @@
 #define tstrdup _wcsdup
 #endif
 
-#define FLYSWATTERSERVERSTARTUPTIMEOUT	20000
+#define FLYTRAPSERVERSTARTUPTIMEOUT	20000
 #define MESSAGE_BUFFER_LEN	(1<<20)
 #define MAX_PATH_LEN	(1<<15)
 #define SAFE_MAX_PATH	(32000)
 #define RUNDLL32_PATH	L"%SystemRoot%\\System32\\rundll32.exe"
-#define FLYSWATTER_LIBRARY_BINARY_NAME	L"FlySwatter.dll"
-typedef struct __FlySwatterContextData {
+#define FLYTRAP_LIBRARY_BINARY_NAME	L"FlyTrap.dll"
+typedef struct __FlyTrapContextData {
 	volatile int enabled;
 	wchar_t *reportUrl;
 	wchar_t *OOPServerExecutablePath;
 	ExceptionHandler *handlerPtr;
 	wchar_t dumpPath[MAX_PATH_LEN+3];
 	CustomClientInfo *ccInfo;
-	FLYSWATTERPARAM *params;
+	FLYTRAPPARAM *params;
 	int params_len;
-} FLYSWATTERCONTEXT, *LPFLYSWATTERCONTEXT;
+} FLYTRAPCONTEXT, *LPFLYTRAPCONTEXT;
 
-typedef struct __FlySwatterServerContextData {
+typedef struct __FlyTrapServerContextData {
 	CrashGenerationServer *server;
 	wchar_t *reportUrl;
 	wchar_t dumpPath[MAX_PATH_LEN+3];
-} FLYSWATTERSERVERCONTEXT, *LPFLYSWATTERSERVERCONTEXT;
+} FLYTRAPSERVERCONTEXT, *LPFLYTRAPSERVERCONTEXT;
 
-LPFLYSWATTERCONTEXT lctx = NULL;
-const wchar_t FSkPipeName[] = L"\\\\.\\pipe\\FlySwatter\\%d";
+LPFLYTRAPCONTEXT lctx = NULL;
+const wchar_t FSkPipeName[] = L"\\\\.\\pipe\\FlyTrap\\%d";
 const wchar_t FSkEventName[] = L"Local\\FlyTrapServerReady%d";
-extern "C" __declspec (dllexport) void __cdecl FlySwatterRunDLLLaunchServerW(HWND hWnd, HINSTANCE hInstance, wchar_t *lpCmdLine, int nCmdShow)
+extern "C" __declspec (dllexport) void __cdecl FlyTrapRunDLLLaunchServerW(HWND hWnd, HINSTANCE hInstance, wchar_t *lpCmdLine, int nCmdShow)
 {
 	wchar_t *tt;
 	wchar_t *offPtr;
@@ -100,9 +100,9 @@ extern "C" __declspec (dllexport) void __cdecl FlySwatterRunDLLLaunchServerW(HWN
 
 	DWORD pid = _wtol(pidStr);
 	
-	LPFLYSWATTERSERVERCONTEXT sCtx = (LPFLYSWATTERSERVERCONTEXT)FlySwatterInitServer(dumpPath, reportUrl, pipeName, startupReadyEventName);
+	LPFLYTRAPSERVERCONTEXT sCtx = (LPFLYTRAPSERVERCONTEXT)FlyTrapInitServer(dumpPath, reportUrl, pipeName, startupReadyEventName);
 	if(sCtx == NULL) {
-		MessageBoxW(NULL, pipeName, L"Could not initialized FlySwatter server.", MB_OK);
+		MessageBoxW(NULL, pipeName, L"Could not initialized FlyTrap server.", MB_OK);
 		return;
 	}
 	// Open the calling process to wait for it to finish.
@@ -114,11 +114,11 @@ extern "C" __declspec (dllexport) void __cdecl FlySwatterRunDLLLaunchServerW(HWN
 		res = WaitForSingleObject(pHandle, 100);
 	}
 
-	FlySwatterShutdownServer(sCtx);
+	FlyTrapShutdownServer(sCtx);
 }
 
 // this is just a wrapper to convert to unicode and invoke the unicode version of this function
-extern "C" __declspec (dllexport) void __cdecl FlySwatterRunDLLLaunchServer(HWND hWnd, HINSTANCE hInstance, char *lpCmdLineA, int nCmdShow)
+extern "C" __declspec (dllexport) void __cdecl FlyTrapRunDLLLaunchServer(HWND hWnd, HINSTANCE hInstance, char *lpCmdLineA, int nCmdShow)
 {
 	size_t szCmdLine;
 	wchar_t *lpCmdLine;
@@ -126,14 +126,14 @@ extern "C" __declspec (dllexport) void __cdecl FlySwatterRunDLLLaunchServer(HWND
 	szCmdLine = strlen(lpCmdLineA) + 1;
 	lpCmdLine = (wchar_t*)malloc((szCmdLine + 1)*sizeof(wchar_t));
 	MultiByteToWideChar(CP_ACP, 0, lpCmdLineA, szCmdLine, lpCmdLine, szCmdLine);
-	FlySwatterRunDLLLaunchServerW(hWnd, hInstance, lpCmdLine, nCmdShow);
+	FlyTrapRunDLLLaunchServerW(hWnd, hInstance, lpCmdLine, nCmdShow);
 	free(lpCmdLine);
 }
 
 // this function uses VirtualAlloc and VirtualProtect in an effort to secure the context structure against corruption
 // it won't always work, but its better than nothing.
 
-bool AddExceptionHandler(LPFLYSWATTERCONTEXT clientContext)
+bool AddExceptionHandler(LPFLYTRAPCONTEXT clientContext)
 {
 	if(clientContext == NULL) {
 		return(false);
@@ -180,7 +180,7 @@ bool AddExceptionHandler(LPFLYSWATTERCONTEXT clientContext)
 	
 	if(clientContext->OOPServerExecutablePath != NULL && wcslen(clientContext->OOPServerExecutablePath) > 0) {
 		// try out of process
-		if(wcscmp(clientContext->OOPServerExecutablePath, FLYSWATTER_LIBRARY_BINARY_NAME)==0) {
+		if(wcscmp(clientContext->OOPServerExecutablePath, FLYTRAP_LIBRARY_BINARY_NAME)==0) {
 			// try to use rundll to launch this DLL again as a server
 			tmpStr = ExpandEnvVarsInStr(RUNDLL32_PATH);
 			if(tmpStr == NULL) {
@@ -200,7 +200,7 @@ bool AddExceptionHandler(LPFLYSWATTERCONTEXT clientContext)
 			wsprintf(eventpathstr, FSkEventName, pid);
 
 			// Generate the server DLL path
-			sModule = GetModuleHandleW(L"FlySwatter");
+			sModule = GetModuleHandleW(L"FlyTrap");
 			if(sModule != NULL) {
 				pMessageBuffer = (wchar_t*)malloc((MESSAGE_BUFFER_LEN+5) * sizeof(wchar_t));
 				if(pMessageBuffer == NULL) {
@@ -218,7 +218,7 @@ bool AddExceptionHandler(LPFLYSWATTERCONTEXT clientContext)
 
 				GetShortPathName(pMessageBuffer, tmpStr, MAX_PATH_LEN);
 				free(pMessageBuffer);
-				dllpath = (wchar_t*)malloc((wcslen(tmpStr) + strlen(",FlySwatterRunDLLLaunchServer") + 5) * sizeof(wchar_t));
+				dllpath = (wchar_t*)malloc((wcslen(tmpStr) + strlen(",FlyTrapRunDLLLaunchServer") + 5) * sizeof(wchar_t));
 				if(dllpath == NULL) {
 					free(fpath);
 					free(tmpStr);
@@ -227,16 +227,16 @@ bool AddExceptionHandler(LPFLYSWATTERCONTEXT clientContext)
 
 				wcscpy(dllpath, tmpStr);
 				free(tmpStr);
-				wcscat(dllpath, L",FlySwatterRunDLLLaunchServer");
+				wcscat(dllpath, L",FlyTrapRunDLLLaunchServer");
 			} else {
 				// Our DLL has been renamed, but try the default anyway
-				dllpath = wcsdup(FLYSWATTER_LIBRARY_BINARY_NAME L",FlySwatterRunDLLLaunchServer");
+				dllpath = wcsdup(FLYTRAP_LIBRARY_BINARY_NAME L",FlyTrapRunDLLLaunchServer");
 			}
 
 			// create an event for the server to use to signal ready
 			serverReadyEvent = ::CreateEventW(NULL, TRUE, FALSE, eventpathstr);
 			if(serverReadyEvent == NULL) {
-				MessageBox(NULL, eventpathstr, L"FlySwatter could not create server startup notification event.", MB_OK);
+				MessageBox(NULL, eventpathstr, L"FlyTrap could not create server startup notification event.", MB_OK);
 				free(fpath);
 				free(dllpath);
 			} else {
@@ -250,24 +250,24 @@ bool AddExceptionHandler(LPFLYSWATTERCONTEXT clientContext)
 					// OOP Server was 'launched', now lets see if we can talk to it
 					// now we have to figure out a way to wait around for something to talk too, it shouldn't take long
 					// but we have to wait otherwise we'll try to connect before the server has actually started.
-					switch(WaitForSingleObject(serverReadyEvent, FLYSWATTERSERVERSTARTUPTIMEOUT)) {
+					switch(WaitForSingleObject(serverReadyEvent, FLYTRAPSERVERSTARTUPTIMEOUT)) {
 						case WAIT_OBJECT_0:
 							// the server has signaled it is ready for client connections
-							clientContext->handlerPtr = new ExceptionHandler((wchar_t*)&clientContext->dumpPath, FlySwatterExceptionFilter, FlySwatterInProcessDumpCallback, clientContext, ExceptionHandler::HANDLER_ALL, MiniDumpNormal, pipepathstr, clientContext->ccInfo);//custom_client_info_c);
+							clientContext->handlerPtr = new ExceptionHandler((wchar_t*)&clientContext->dumpPath, FlyTrapExceptionFilter, FlyTrapInProcessDumpCallback, clientContext, ExceptionHandler::HANDLER_ALL, MiniDumpNormal, pipepathstr, clientContext->ccInfo);//custom_client_info_c);
 							CloseHandle(serverReadyEvent);
 							return(true);
 							break;
 						case WAIT_ABANDONED:
-							MessageBox(NULL, L"FlySwatter server could not be started, in process error reporting will be used.", L"", MB_OK);
+							MessageBox(NULL, L"FlyTrap server could not be started, in process error reporting will be used.", L"", MB_OK);
 							break;
 						case WAIT_TIMEOUT:
-							MessageBox(NULL, L"FlySwatter server did not start in time, in process error reporting will be used.", L"", MB_OK);
+							MessageBox(NULL, L"FlyTrap server did not start in time, in process error reporting will be used.", L"", MB_OK);
 							break;
 						case WAIT_FAILED:
-							MessageBox(NULL, L"A system error occured waiting on the the FlySwatter server to become ready, in process error reporting will be used.", L"", MB_OK);
+							MessageBox(NULL, L"A system error occured waiting on the the FlyTrap server to become ready, in process error reporting will be used.", L"", MB_OK);
 							break;
 						default:
-							MessageBox(NULL, L"An unexpected error occured waiting on the the FlySwatter server to become ready, in process error reporting will be used.", L"", MB_OK);
+							MessageBox(NULL, L"An unexpected error occured waiting on the the FlyTrap server to become ready, in process error reporting will be used.", L"", MB_OK);
 							break;
 					}
 				}
@@ -279,7 +279,7 @@ bool AddExceptionHandler(LPFLYSWATTERCONTEXT clientContext)
 	if(clientContext->handlerPtr == NULL) {
 		// no crash CrashGenerationClient exists, so fall back to internal
 		// exception handling
-		clientContext->handlerPtr = new ExceptionHandler((wchar_t*)&clientContext->dumpPath, FlySwatterExceptionFilter, FlySwatterInProcessDumpCallback, clientContext, ExceptionHandler::HANDLER_ALL);
+		clientContext->handlerPtr = new ExceptionHandler((wchar_t*)&clientContext->dumpPath, FlyTrapExceptionFilter, FlyTrapInProcessDumpCallback, clientContext, ExceptionHandler::HANDLER_ALL);
 	}
 	if(clientContext->handlerPtr != NULL) {
 		return(true);
@@ -288,7 +288,7 @@ bool AddExceptionHandler(LPFLYSWATTERCONTEXT clientContext)
 	}
 }
 
-FLYSWATTER_API int __stdcall FlySwatterInitClient(wchar_t *dumpPath, wchar_t *reportUrl, wchar_t *OOPExePath)
+FLYTRAP_API int __stdcall FlyTrapInitClient(wchar_t *dumpPath, wchar_t *reportUrl, wchar_t *OOPExePath)
 {
 	TCHAR *expandedDumpPath = NULL;
 	size_t edpSize = 0;
@@ -301,13 +301,13 @@ FLYSWATTER_API int __stdcall FlySwatterInitClient(wchar_t *dumpPath, wchar_t *re
 	// Allocate some memory that we can protect later, we want to do it at the top of the address space
 	// to put it as far away from the application as possible, this of course assumes that the heap is
 	// at the bottom of the address space
-	LPFLYSWATTERCONTEXT clientContext = (LPFLYSWATTERCONTEXT)VirtualAlloc(NULL, sizeof(FLYSWATTERCONTEXT), MEM_COMMIT | MEM_RESERVE | MEM_TOP_DOWN, PAGE_READWRITE);
+	LPFLYTRAPCONTEXT clientContext = (LPFLYTRAPCONTEXT)VirtualAlloc(NULL, sizeof(FLYTRAPCONTEXT), MEM_COMMIT | MEM_RESERVE | MEM_TOP_DOWN, PAGE_READWRITE);
 	if(clientContext == NULL) {
 		return(-2);
 	}
 	// We shouldn't need to do this as VirtualAlloc is supposed to do it
 	// But we do it anyway so we know where we stand, crash handlers need special care
-	SecureZeroMemory(clientContext, sizeof(FLYSWATTERCONTEXT));
+	SecureZeroMemory(clientContext, sizeof(FLYTRAPCONTEXT));
 
 	wchar_t *tmpStr;
 
@@ -345,31 +345,31 @@ FLYSWATTER_API int __stdcall FlySwatterInitClient(wchar_t *dumpPath, wchar_t *re
  *
  */
 
-FLYSWATTER_API int __stdcall FlySwatterShutdownClient(void *clientContext)
+FLYTRAP_API int __stdcall FlyTrapShutdownClient(void *clientContext)
 {
 	if(clientContext == NULL){
 		return(false);
 	} else {
-		VirtualFree(clientContext, sizeof(FLYSWATTERCONTEXT), MEM_RELEASE);
+		VirtualFree(clientContext, sizeof(FLYTRAPCONTEXT), MEM_RELEASE);
 		free(clientContext);
 		return(true);
 	}
 }
 
-FLYSWATTER_API int __stdcall FlySwatterShutdownServer(void *serverContext)
+FLYTRAP_API int __stdcall FlyTrapShutdownServer(void *serverContext)
 {
-	LPFLYSWATTERSERVERCONTEXT sCtx = (LPFLYSWATTERSERVERCONTEXT)serverContext;
+	LPFLYTRAPSERVERCONTEXT sCtx = (LPFLYTRAPSERVERCONTEXT)serverContext;
 	if(sCtx != NULL) {
 		if(sCtx->server != NULL) {
 			delete sCtx->server;
 		}
-		VirtualFree(sCtx, sizeof(FLYSWATTERSERVERCONTEXT), MEM_RELEASE);
+		VirtualFree(sCtx, sizeof(FLYTRAPSERVERCONTEXT), MEM_RELEASE);
 		return(true);
 	}
 	return(false);
 }
 
-FLYSWATTER_API void * __stdcall FlySwatterInitServer(wchar_t *dumpPath, wchar_t *reportUrl, wchar_t *pipeName, wchar_t *serverReadyEventName)
+FLYTRAP_API void * __stdcall FlyTrapInitServer(wchar_t *dumpPath, wchar_t *reportUrl, wchar_t *pipeName, wchar_t *serverReadyEventName)
 {
 //	TCHAR *expandedDumpPath = NULL;
 //	size_t edpSize = 0;
@@ -377,19 +377,19 @@ FLYSWATTER_API void * __stdcall FlySwatterInitServer(wchar_t *dumpPath, wchar_t 
 	// Allocate some memory that we can protect later, we want to do it at the top of the address space
 	// to put it as far away from the application as possible, this of course assumes that the heap is
 	// at the bottom of the address space
-	LPFLYSWATTERSERVERCONTEXT serverContext = (LPFLYSWATTERSERVERCONTEXT)VirtualAlloc(NULL, sizeof(FLYSWATTERSERVERCONTEXT), MEM_COMMIT | MEM_RESERVE | MEM_TOP_DOWN, PAGE_READWRITE);
+	LPFLYTRAPSERVERCONTEXT serverContext = (LPFLYTRAPSERVERCONTEXT)VirtualAlloc(NULL, sizeof(FLYTRAPSERVERCONTEXT), MEM_COMMIT | MEM_RESERVE | MEM_TOP_DOWN, PAGE_READWRITE);
 	if(serverContext == NULL) {
 		return(NULL);
 	}
 	// We shouldn't need to do this as VirtualAlloc is supposed to do it
 	// But we do it anyway so we know where we stand, crash handlers need special care
-	SecureZeroMemory(serverContext, sizeof(FLYSWATTERSERVERCONTEXT));
+	SecureZeroMemory(serverContext, sizeof(FLYTRAPSERVERCONTEXT));
 
 	serverContext->reportUrl = wcsdup(reportUrl);
 
 	wstring rPipePath (pipeName);
 	wstring rDumpPath (dumpPath);
-	serverContext->server = new CrashGenerationServer(rPipePath, NULL, NULL, NULL, (google_breakpad::CrashGenerationServer::OnClientDumpRequestCallback)&FlySwatterOutOfProcessDumpCallback, serverContext, NULL, NULL, true, &rDumpPath);
+	serverContext->server = new CrashGenerationServer(rPipePath, NULL, NULL, NULL, (google_breakpad::CrashGenerationServer::OnClientDumpRequestCallback)&FlyTrapOutOfProcessDumpCallback, serverContext, NULL, NULL, true, &rDumpPath);
 	if(serverContext->server->Start() != true) {
 		delete serverContext->server;
 		free(serverContext);
@@ -400,7 +400,7 @@ FLYSWATTER_API void * __stdcall FlySwatterInitServer(wchar_t *dumpPath, wchar_t 
 
 	if(serverReadyEvent == NULL) {
 		DWORD errNo = GetLastError();
-		MessageBox(NULL, serverReadyEventName, L"FlySwatter could not open server startup notification event.", MB_OK);
+		MessageBox(NULL, serverReadyEventName, L"FlyTrap could not open server startup notification event.", MB_OK);
 	} else {
 		SetEvent(serverReadyEvent);
 		CloseHandle(serverReadyEvent);
@@ -408,7 +408,7 @@ FLYSWATTER_API void * __stdcall FlySwatterInitServer(wchar_t *dumpPath, wchar_t 
 	return(serverContext);	
 }
 
-FLYSWATTER_API int __stdcall FlySwatterEnable()
+FLYTRAP_API int __stdcall FlyTrapEnable()
 {
 	if(lctx == NULL) {
 		return(-1);
@@ -421,7 +421,7 @@ FLYSWATTER_API int __stdcall FlySwatterEnable()
 	return(InterlockedExchange((volatile LONG *)&lctx->enabled, 1));
 }
 
-FLYSWATTER_API int __stdcall FlySwatterDisable()
+FLYTRAP_API int __stdcall FlyTrapDisable()
 {
 	if(lctx == NULL) {
 		return(-1);
@@ -432,7 +432,7 @@ FLYSWATTER_API int __stdcall FlySwatterDisable()
 	return(InterlockedExchange((volatile LONG *)&lctx->enabled, 0));
 }
 
-FLYSWATTER_API int __stdcall FlySwatterIsEnabled()
+FLYTRAP_API int __stdcall FlyTrapIsEnabled()
 {
 	if(lctx == NULL) {
 		return(-1);
@@ -443,7 +443,7 @@ FLYSWATTER_API int __stdcall FlySwatterIsEnabled()
 	return(lctx->enabled);
 }
 
-FLYSWATTER_API void __stdcall FlySwatterSetParam(const wchar_t *name, const wchar_t *value)
+FLYTRAP_API void __stdcall FlyTrapSetParam(const wchar_t *name, const wchar_t *value)
 {
 	if(lctx == NULL) {
 		return;
@@ -458,8 +458,8 @@ FLYSWATTER_API void __stdcall FlySwatterSetParam(const wchar_t *name, const wcha
 		return;
 	}
 
-	LPFLYSWATTERPARAM p = NULL;
-	LPFLYSWATTERPARAM ep = NULL;
+	LPFLYTRAPPARAM p = NULL;
+	LPFLYTRAPPARAM ep = NULL;
 
 	// First we have to see if the parameter we're setting already exists
 	for(int i = 0; i < lctx->params_len; i++) {
@@ -485,18 +485,18 @@ FLYSWATTER_API void __stdcall FlySwatterSetParam(const wchar_t *name, const wcha
 	if(p == NULL) {
 		// the name doesn't exist already, add it
 		if(lctx->params_len == 0) {
-			lctx->params = (LPFLYSWATTERPARAM)VirtualAlloc(NULL, (16 * sizeof(FLYSWATTERPARAM)), MEM_COMMIT | MEM_RESERVE | MEM_TOP_DOWN, PAGE_READWRITE);
+			lctx->params = (LPFLYTRAPPARAM)VirtualAlloc(NULL, (16 * sizeof(FLYTRAPPARAM)), MEM_COMMIT | MEM_RESERVE | MEM_TOP_DOWN, PAGE_READWRITE);
 			if(lctx->params == NULL) {
 				// we couldn't allocate our buffer, just get out of town
 				return;
 			}
 			// We shouldn't need to do this as VirtualAlloc is supposed to do it
 			// But we do it anyway so we know where we stand, crash handlers need special care
-			SecureZeroMemory(lctx->params, 16 * sizeof(FLYSWATTERPARAM));
+			SecureZeroMemory(lctx->params, 16 * sizeof(FLYTRAPPARAM));
 
-			lctx->params = (LPFLYSWATTERPARAM)calloc(16, sizeof(FLYSWATTERPARAM));
+			lctx->params = (LPFLYTRAPPARAM)calloc(16, sizeof(FLYTRAPPARAM));
 			lctx->params_len = 16;
-			memset(lctx->params, 0, (16 * sizeof(FLYSWATTERPARAM)));
+			memset(lctx->params, 0, (16 * sizeof(FLYTRAPPARAM)));
 			p = &lctx->params[0];
 			p->name = _wcsdup(name);
 		} else {
@@ -510,17 +510,17 @@ FLYSWATTER_API void __stdcall FlySwatterSetParam(const wchar_t *name, const wcha
 				}
 			} else {
 				// we have to grow the buffer block
-				void *tPtr = (LPFLYSWATTERPARAM)VirtualAlloc(NULL, ((lctx->params_len + 16) * sizeof(FLYSWATTERPARAM)), MEM_COMMIT | MEM_RESERVE | MEM_TOP_DOWN, PAGE_READWRITE);
+				void *tPtr = (LPFLYTRAPPARAM)VirtualAlloc(NULL, ((lctx->params_len + 16) * sizeof(FLYTRAPPARAM)), MEM_COMMIT | MEM_RESERVE | MEM_TOP_DOWN, PAGE_READWRITE);
 				if(tPtr == NULL) {
 					// we couldn't allocate our buffer, just get out of town
 					return;
 				}
 				// We shouldn't need to do this as VirtualAlloc is supposed to do it
 				// But we do it anyway so we know where we stand, crash handlers need special care
-				SecureZeroMemory(tPtr, ((lctx->params_len + 16) * sizeof(FLYSWATTERPARAM)));
-				MoveMemory(tPtr, lctx->params, (lctx->params_len * sizeof(FLYSWATTERPARAM)));
-				VirtualFree(lctx->params, (lctx->params_len * sizeof(FLYSWATTERPARAM)), MEM_RELEASE);
-				lctx->params = (LPFLYSWATTERPARAM)tPtr;
+				SecureZeroMemory(tPtr, ((lctx->params_len + 16) * sizeof(FLYTRAPPARAM)));
+				MoveMemory(tPtr, lctx->params, (lctx->params_len * sizeof(FLYTRAPPARAM)));
+				VirtualFree(lctx->params, (lctx->params_len * sizeof(FLYTRAPPARAM)), MEM_RELEASE);
+				lctx->params = (LPFLYTRAPPARAM)tPtr;
 				p = &lctx->params[lctx->params_len];
 				lctx->params_len += 16;
 				p->name = _wcsdup(name);
@@ -533,7 +533,7 @@ FLYSWATTER_API void __stdcall FlySwatterSetParam(const wchar_t *name, const wcha
 	}
 }
 
-const wchar_t *FlySwatterGetParamEx(LPFLYSWATTERPARAM params, int params_len, const wchar_t *name)
+const wchar_t *FlyTrapGetParamEx(LPFLYTRAPPARAM params, int params_len, const wchar_t *name)
 {
 	if(name == NULL) {
 		// can't do anything with this
@@ -559,15 +559,15 @@ const wchar_t *FlySwatterGetParamEx(LPFLYSWATTERPARAM params, int params_len, co
 	return(NULL);
 }
 
-FLYSWATTER_API const wchar_t * __stdcall FlySwatterGetParam(const wchar_t *name)
+FLYTRAP_API const wchar_t * __stdcall FlyTrapGetParam(const wchar_t *name)
 {
 	if(lctx == NULL) {
 		return(NULL);
 	}
-	return(FlySwatterGetParamEx(lctx->params, lctx->params_len, name));
+	return(FlyTrapGetParamEx(lctx->params, lctx->params_len, name));
 }
 
-FLYSWATTER_API void __stdcall FlySwatterTriggerReport()
+FLYTRAP_API void __stdcall FlyTrapTriggerReport()
 {
 	if(lctx == NULL) {
 		return;
@@ -578,7 +578,7 @@ FLYSWATTER_API void __stdcall FlySwatterTriggerReport()
 	lctx->handlerPtr->WriteMinidump();
 }
 
-bool FlySwatterExceptionFilter(void *ctx, EXCEPTION_POINTERS *exceptionInfo, MDRawAssertionInfo *assertionInfo)
+bool FlyTrapExceptionFilter(void *ctx, EXCEPTION_POINTERS *exceptionInfo, MDRawAssertionInfo *assertionInfo)
 {
 	// This filter determines if we have anything to do with catching the exception.  If we return true, the dump
 	// will be written and the dump callback called.  If we return false, the exception will be passed up the
@@ -589,22 +589,22 @@ bool FlySwatterExceptionFilter(void *ctx, EXCEPTION_POINTERS *exceptionInfo, MDR
 		return(false);
 	}
 
-	if(((LPFLYSWATTERCONTEXT)ctx)->enabled == 0) {
+	if(((LPFLYTRAPCONTEXT)ctx)->enabled == 0) {
 		return(false);
 	}
 
-	// we always call FlySwatter for now when we're enabled
+	// we always call FlyTrap for now when we're enabled
 	return(true);
 }
 
-void FlySwatterOutOfProcessDumpCallback(void *dump_context, ClientInfo *client_info, const std::wstring *dump_path)
+void FlyTrapOutOfProcessDumpCallback(void *dump_context, ClientInfo *client_info, const std::wstring *dump_path)
 {
-	LPFLYSWATTERPARAM params;
-	LPFLYSWATTERSERVERCONTEXT serverContext = (LPFLYSWATTERSERVERCONTEXT)dump_context;
+	LPFLYTRAPPARAM params;
+	LPFLYTRAPSERVERCONTEXT serverContext = (LPFLYTRAPSERVERCONTEXT)dump_context;
 	CustomClientInfo ccInfo = client_info->GetCustomInfo();
 
 	if(ccInfo.count > 0) {
-		params = (LPFLYSWATTERPARAM)malloc(sizeof(FLYSWATTERPARAM) * ccInfo.count);
+		params = (LPFLYTRAPPARAM)malloc(sizeof(FLYTRAPPARAM) * ccInfo.count);
 		if(params == NULL) {
 			/// @TODO Handle this error in some way to let someone know it happened
 			return;
@@ -619,19 +619,19 @@ void FlySwatterOutOfProcessDumpCallback(void *dump_context, ClientInfo *client_i
 
 	if(dump_path != NULL) {
 		const wchar_t *dPath = dump_path->c_str();
-		FlySwatterCrashAlert(serverContext->reportUrl, dPath, params, ccInfo.count);
+		FlyTrapCrashAlert(serverContext->reportUrl, dPath, params, ccInfo.count);
 		_wunlink(dPath);
 	} else {
-		FlySwatterCrashAlert(serverContext->reportUrl, NULL, params, ccInfo.count);
+		FlyTrapCrashAlert(serverContext->reportUrl, NULL, params, ccInfo.count);
 	}
 	if(params != NULL) {
 		free(params);
 	}
 }
 
-bool FlySwatterInProcessDumpCallback(const wchar_t *dumpPath, const wchar_t *dumpId, void *mctx, EXCEPTION_POINTERS *exceptionInfo, MDRawAssertionInfo *assertionInfo, bool dumpSucceeded)
+bool FlyTrapInProcessDumpCallback(const wchar_t *dumpPath, const wchar_t *dumpId, void *mctx, EXCEPTION_POINTERS *exceptionInfo, MDRawAssertionInfo *assertionInfo, bool dumpSucceeded)
 {
-	LPFLYSWATTERCONTEXT ctx = (LPFLYSWATTERCONTEXT)mctx;
+	LPFLYTRAPCONTEXT ctx = (LPFLYTRAPCONTEXT)mctx;
 	if(dumpSucceeded == false) {
 		// send the crash report even if a dump could not be created
 		// return(false);
@@ -645,16 +645,16 @@ bool FlySwatterInProcessDumpCallback(const wchar_t *dumpPath, const wchar_t *dum
 	wchar_t miniDumpFilename[1025];
 	if(dumpSucceeded == true) {
 		if(dumpPath == NULL || dumpId == NULL) {
-			FlySwatterCrashAlert(ctx->reportUrl, NULL, ctx->params, ctx->params_len);
+			FlyTrapCrashAlert(ctx->reportUrl, NULL, ctx->params, ctx->params_len);
 		} else {
 			wsprintf(miniDumpFilename, L"%s\\%s.dmp", dumpPath, dumpId);
 			miniDumpFilename[1023] = L'\0';
-			FlySwatterCrashAlert(ctx->reportUrl, miniDumpFilename, ctx->params, ctx->params_len);
+			FlyTrapCrashAlert(ctx->reportUrl, miniDumpFilename, ctx->params, ctx->params_len);
 			// the minidump should already be gone, but we're going to remove it again anyway to be safe
 			_wunlink(miniDumpFilename);
 		}
 	} else {
-		FlySwatterCrashAlert(ctx->reportUrl, NULL, ctx->params, ctx->params_len);
+		FlyTrapCrashAlert(ctx->reportUrl, NULL, ctx->params, ctx->params_len);
 	}
 
 	return(true);
@@ -863,15 +863,15 @@ void DeleteParamMap(map<wstring, wstring> *oldMap)
 }
 
 // creates a map<wstring, wstring> suitable for submission using the breakpad CrashReportSender.SendReport method
-map<wstring, wstring> *CreateParamMap(const LPFLYSWATTERPARAM params, const int params_len, const wchar_t *dumpId, const wchar_t *reportUrl)
+map<wstring, wstring> *CreateParamMap(const LPFLYTRAPPARAM params, const int params_len, const wchar_t *dumpId, const wchar_t *reportUrl)
 {
 	map<wstring, wstring> *paramsStr = new map<wstring, wstring>;
 	if(paramsStr == NULL) {
 		return(NULL);
 	}
-	(*paramsStr)[L"FlySwatterVersion"] = _T(FLYSWATTER_VERSION_STRING);
-	(*paramsStr)[L"FlySwatterCrashId"] = dumpId;
-	(*paramsStr)[L"FlySwatterReportURL"] = reportUrl;
+	(*paramsStr)[L"FlyTrapVersion"] = _T(FLYTRAP_VERSION_STRING);
+	(*paramsStr)[L"FlyTrapCrashId"] = dumpId;
+	(*paramsStr)[L"FlyTrapReportURL"] = reportUrl;
 
 	FILE *fp;
 	int iCount;
@@ -897,10 +897,10 @@ map<wstring, wstring> *CreateParamMap(const LPFLYSWATTERPARAM params, const int 
 			// blank entry, just skip it.  We could probably break out of the loop but we won't do that since
 			// we may have a way to delete entries in the future
 			continue;
-		} else if(wcsncmp(params[i].name, L"FlySwatter_CrashAlertDialog_", wcslen(L"FlySwatter_CrashAlertDialog_")) == 0) {
-			// Parameters that start with FlySwatter_CrashAlertDialog_ are for use by the dialog display only
+		} else if(wcsncmp(params[i].name, L"FlyTrap_CrashAlertDialog_", wcslen(L"FlyTrap_CrashAlertDialog_")) == 0) {
+			// Parameters that start with FlyTrap_CrashAlertDialog_ are for use by the dialog display only
 			continue;
-		} else if(wcscmp(params[i].name, L"FlySwatter_AttachFiles") == 0) {
+		} else if(wcscmp(params[i].name, L"FlyTrap_AttachFiles") == 0) {
 			// Add the files specified
 			if(params[i].value != NULL) {
 				if(wcslen(params[i].value)>0) {
@@ -954,7 +954,7 @@ map<wstring, wstring> *CreateParamMap(const LPFLYSWATTERPARAM params, const int 
 						} else {
 							outBuf = wcsdup(L"File name missing;-1;");
 						}
-						wsprintf(nameBuf, L"FlySwatter_AttachFiles_%d", iCount);
+						wsprintf(nameBuf, L"FlyTrap_AttachFiles_%d", iCount);
 						// set the map value to our base64 encoded file data
 						(*paramsStr)[nameBuf] = outBuf;
 						// outBuf is no longer needed
@@ -1007,7 +1007,7 @@ map<wstring, wstring> *CreateParamMap(const LPFLYSWATTERPARAM params, const int 
 						} else {
 							outBuf = wcsdup(L"File name missing;-1;");
 						}
-						wsprintf(nameBuf, L"FlySwatter_AttachFiles_%d", iCount);
+						wsprintf(nameBuf, L"FlyTrap_AttachFiles_%d", iCount);
 						// set the map value to our base64 encoded file data
 						(*paramsStr)[nameBuf] = outBuf;
 						// outBuf is no longer needed
@@ -1017,7 +1017,7 @@ map<wstring, wstring> *CreateParamMap(const LPFLYSWATTERPARAM params, const int 
 					free(tfnameBuf);
 				}
 			}
-		} else if(wcscmp(params[i].name, L"FlySwatter_AttachRegKeys") == 0) {
+		} else if(wcscmp(params[i].name, L"FlyTrap_AttachRegKeys") == 0) {
 			// Dump the specified registry keys and include them
 			if(params[i].value != NULL) {
 				if(wcslen(params[i].value)>0) {
@@ -1041,7 +1041,7 @@ map<wstring, wstring> *CreateParamMap(const LPFLYSWATTERPARAM params, const int 
 								outBuf = mprintf(L"%s;Could not open registry key", fnameBuf);
 							}
 						}
-						wsprintf(nameBuf, L"FlySwatter_AttachRegKeys_%d", iCount);
+						wsprintf(nameBuf, L"FlyTrap_AttachRegKeys_%d", iCount);
 						// set the map value to our base64 encoded data
 						(*paramsStr)[nameBuf] = outBuf;
 						// outBuf is no longer needed
@@ -1064,7 +1064,7 @@ map<wstring, wstring> *CreateParamMap(const LPFLYSWATTERPARAM params, const int 
 								outBuf = mprintf(L"%s;Could not open registry key", fnameBuf);
 							}
 						}
-						wsprintf(nameBuf, L"FlySwatter_AttachRegKeys_%d", iCount);
+						wsprintf(nameBuf, L"FlyTrap_AttachRegKeys_%d", iCount);
 						// set the map value to our base64 encoded data
 						(*paramsStr)[nameBuf] = outBuf;
 						// outBuf is no longer needed

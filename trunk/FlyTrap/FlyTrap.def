@@ -1,0 +1,14 @@
+LIBRARY	"FlyTrap"
+EXPORTS
+FlyTrapInitClient=_FlyTrapInitClient@12					@1
+FlyTrapShutdownClient=_FlyTrapShutdownClient@4			@2
+FlyTrapInitServer=_FlyTrapInitServer@16					@3
+FlyTrapShutdownServer=_FlyTrapShutdownServer@4			@4
+FlyTrapRunDLLLaunchServerW=FlyTrapRunDLLLaunchServerW		@5
+FlyTrapRunDLLLaunchServer=FlyTrapRunDLLLaunchServer		@6
+FlyTrapIsEnabled=_FlyTrapIsEnabled@0						@10
+FlyTrapDisable=_FlyTrapDisable@0							@11
+FlyTrapEnable=_FlyTrapEnable@0							@12
+FlyTrapSetParam=_FlyTrapSetParam@8						@13
+FlyTrapGetParam=_FlyTrapGetParam@4						@14
+FlyTrapTriggerReport=_FlyTrapTriggerReport@0				@15
