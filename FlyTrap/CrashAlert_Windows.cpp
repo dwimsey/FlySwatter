@@ -2,27 +2,27 @@
 #define USE_TAB_CONTROL_FOR_REPORTLAYOUT 1
 static HINSTANCE fsgh_Instance = NULL;
 
-void FlySwatter_UnregisterCrashAlertDialogWindowClass(HINSTANCE hInstance)
+void FlyTrap_UnregisterCrashAlertDialogWindowClass(HINSTANCE hInstance)
 {
 	fsgh_Instance = NULL;
 }
 
-void FlySwatter_RegisterCrashAlertDialogWindowClass(HINSTANCE hInstance)
+void FlyTrap_RegisterCrashAlertDialogWindowClass(HINSTANCE hInstance)
 {
 	fsgh_Instance = hInstance;
 }
 
-typedef struct __FlySwatterCrashAlertDialogInitDataStructure {
+typedef struct __FlyTrapCrashAlertDialogInitDataStructure {
 	wchar_t *dumpFileName;
 	wchar_t *dumpDir;
 	wchar_t *dumpId;
 	wchar_t *reportUrl;
-	LPFLYSWATTERPARAM params;
+	LPFLYTRAPPARAM params;
 	int params_len;
 	int useTabControl;
-} FLYSWATTERCRASHALERTDIALOGINITDATA, *LPFLYSWATTERCRASHALERTDIALOGINITDATA;
+} FLYTRAPCRASHALERTDIALOGINITDATA, *LPFLYTRAPCRASHALERTDIALOGINITDATA;
 
-const wchar_t *FlySwatterGetParamEx(LPFLYSWATTERPARAM params, int params_len, const wchar_t *name);
+const wchar_t *FlyTrapGetParamEx(LPFLYTRAPPARAM params, int params_len, const wchar_t *name);
 
 #include <stdarg.h>
 
@@ -41,7 +41,7 @@ const wchar_t *FlySwatterGetParamEx(LPFLYSWATTERPARAM params, int params_len, co
 // this function is very slow as it handles each character one a time, there are probably
 // far far faster methods of doing this, but its used so rarely that speed shouldn't be an
 // issue
-wchar_t *formatStr(wchar_t *format, LPFLYSWATTERPARAM params, int params_len)
+wchar_t *formatStr(wchar_t *format, LPFLYTRAPPARAM params, int params_len)
 {
 	if(format == NULL) {
 		return(NULL);
@@ -81,7 +81,7 @@ wchar_t *formatStr(wchar_t *format, LPFLYSWATTERPARAM params, int params_len)
 						wcsncpy(varName, (wchar_t*)&format[(i + 1)], (t - i));
 						varName[((t-i)-1)] = L'\0';
 
-						varValue = (wchar_t*)FlySwatterGetParamEx(params, params_len, varName);
+						varValue = (wchar_t*)FlyTrapGetParamEx(params, params_len, varName);
 						free(varName);
 						if(varValue != NULL) {
 							ENSURE_BUFFER_SIZE(wcslen(varValue));
@@ -268,7 +268,7 @@ typedef struct __FSCADHandles {
 	HWND btnMoreInfo;
 	HWND btnPrivacy;
 	HWND tabMain;
-	LPFLYSWATTERPARAM params;
+	LPFLYTRAPPARAM params;
 	int params_len;
 	int useTabControl;
 } FSCADHANDLE, *LPFSCADHANDLE;
@@ -283,19 +283,19 @@ void SetActiveTab(LPFSCADHANDLE dHandle, int tabPage, BOOL activateTab)
 
 	switch(tabPage) {
 		case 0:
-			tmpPtr = (wchar_t*)FlySwatterGetParamEx(dHandle->params, dHandle->params_len, L"FlySwatter_CrashAlertDialog_Info1Message");
+			tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, L"FlyTrap_CrashAlertDialog_Info1Message");
 			if(tmpPtr == NULL) {
 				tmpPtr = L"Something has caused {AppName} to crash and a crash report has been generated.\r\n\r\nThe crash report may contain confidential information from the program at the time it crashed.\r\n\r\nClick the 'Send' button to send this crash information to {CompanyShortName}.";
 			}
 			break;
 		case 1:
-			tmpPtr = (wchar_t*)FlySwatterGetParamEx(dHandle->params, dHandle->params_len, L"FlySwatter_CrashAlertDialog_Info2Message");
+			tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, L"FlyTrap_CrashAlertDialog_Info2Message");
 			if(tmpPtr == NULL) {
 				tmpPtr = L"No additional information at this time.";
 			}
 			break;
 		case 2:
-			tmpPtr = (wchar_t*)FlySwatterGetParamEx(dHandle->params, dHandle->params_len, L"FlySwatter_CrashAlertDialog_Info3Message");
+			tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, L"FlyTrap_CrashAlertDialog_Info3Message");
 			if(tmpPtr == NULL) {
 				tmpPtr = L"Reporting this crash will send information about what the program was doing when it crashed to {CompanyLegalName}\r\n\r\nThe information may include sections or all of the applications memory, information about running programs on your computer, various registry keys related to the way your system and this software is configured, log files relating to this application.  Any of these sources of information may contain confidential information and should only be sent if you are certain it contains only information you are willing to share over the Internet.";
 			}
@@ -312,7 +312,7 @@ void SetActiveTab(LPFSCADHANDLE dHandle, int tabPage, BOOL activateTab)
 	free(fTmpPtr);
 }
 
-void FlySwatterLayoutCrashAlertDialog(LPFSCADHANDLE dHandle, BOOL rePaint)
+void FlyTrapLayoutCrashAlertDialog(LPFSCADHANDLE dHandle, BOOL rePaint)
 {
 	RECT btnRect;		// standard button size, btnRect.left and btnRect.top are consider the border width and standard spacers
 	RECT chkRect;		// chkRect.bottom is the reference point for how tall a checkbox is by default
@@ -378,7 +378,7 @@ void FlySwatterLayoutCrashAlertDialog(LPFSCADHANDLE dHandle, BOOL rePaint)
 		dHandle->useTabControl = 0;
 	}
 
-	int hasPrivacyInfo = (FlySwatterGetParamEx(dHandle->params, dHandle->params_len, L"FlySwatter_CrashAlertDialog_Info3Message") == NULL ? 0 : 1);
+	int hasPrivacyInfo = (FlyTrapGetParamEx(dHandle->params, dHandle->params_len, L"FlyTrap_CrashAlertDialog_Info3Message") == NULL ? 0 : 1);
 
 	if(hasPrivacyInfo == 1) {
 		// put the privacy info on the far right
@@ -482,7 +482,7 @@ void FlySwatterLayoutCrashAlertDialog(LPFSCADHANDLE dHandle, BOOL rePaint)
 	SetActiveTab(dHandle, 0, TRUE);
 }
 
-void InitFlySwatterCrashDialog(HWND hWnd, LPFLYSWATTERCRASHALERTDIALOGINITDATA idPtr)
+void InitFlyTrapCrashDialog(HWND hWnd, LPFLYTRAPCRASHALERTDIALOGINITDATA idPtr)
 {
 	LPFSCADHANDLE dHandle;
 	wchar_t *tmpPtr = NULL;
@@ -534,7 +534,7 @@ void InitFlySwatterCrashDialog(HWND hWnd, LPFLYSWATTERCRASHALERTDIALOGINITDATA i
 		// Add tabs
 		tie.mask = TCIF_TEXT | TCIF_IMAGE;
 		tie.iImage = -1;
-		tie.pszText = (wchar_t*)FlySwatterGetParamEx(idPtr->params, idPtr->params_len, L"FlySwatter_CrashAlertDialog_Info1Button");
+		tie.pszText = (wchar_t*)FlyTrapGetParamEx(idPtr->params, idPtr->params_len, L"FlyTrap_CrashAlertDialog_Info1Button");
 		if(tie.pszText == NULL) {
 			tie.pszText = L"General";
 		}
@@ -542,7 +542,7 @@ void InitFlySwatterCrashDialog(HWND hWnd, LPFLYSWATTERCRASHALERTDIALOGINITDATA i
 			// TODO: Add error handling if the tab can't be added
 		}
 
-		tie.pszText = (wchar_t*)FlySwatterGetParamEx(idPtr->params, idPtr->params_len, L"FlySwatter_CrashAlertDialog_Info2Button");
+		tie.pszText = (wchar_t*)FlyTrapGetParamEx(idPtr->params, idPtr->params_len, L"FlyTrap_CrashAlertDialog_Info2Button");
 		if(tie.pszText == NULL) {
 			tie.pszText = L"Crash Report";
 		}
@@ -551,8 +551,8 @@ void InitFlySwatterCrashDialog(HWND hWnd, LPFLYSWATTERCRASHALERTDIALOGINITDATA i
 		}
 
 		// We only add the privacy tab if we have a privacy statement
-		if(FlySwatterGetParamEx(idPtr->params, idPtr->params_len, L"FlySwatter_CrashAlertDialog_Info3Message") != NULL) {
-			tie.pszText = (wchar_t*)FlySwatterGetParamEx(idPtr->params, idPtr->params_len, L"FlySwatter_CrashAlertDialog_Info3Button");
+		if(FlyTrapGetParamEx(idPtr->params, idPtr->params_len, L"FlyTrap_CrashAlertDialog_Info3Message") != NULL) {
+			tie.pszText = (wchar_t*)FlyTrapGetParamEx(idPtr->params, idPtr->params_len, L"FlyTrap_CrashAlertDialog_Info3Button");
 			if(tie.pszText == NULL) {
 				tie.pszText = L"Privacy Information";
 			}
@@ -568,7 +568,7 @@ void InitFlySwatterCrashDialog(HWND hWnd, LPFLYSWATTERCRASHALERTDIALOGINITDATA i
 	dHandle->btnOk = CreateWindowEx(0, L"BUTTON", L"Send", WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON | BS_PUSHBUTTON | BS_VCENTER | BS_CENTER | BS_TEXT, (cRect.right - ((btnRect.right + btnRect.left) * 2)), (cRect.bottom - (btnRect.bottom + btnRect.top)), btnRect.right, btnRect.bottom, hWnd, NULL, fsgh_Instance, NULL);
 	if(dHandle->btnOk != NULL) {
 		SetWindowLongPtrW(dHandle->btnOk, GWLP_ID, IDC_BTN_SEND);
-		tmpPtr = (wchar_t*)FlySwatterGetParamEx(idPtr->params, idPtr->params_len, L"FlySwatter_CrashAlertDialog_SendButton");
+		tmpPtr = (wchar_t*)FlyTrapGetParamEx(idPtr->params, idPtr->params_len, L"FlyTrap_CrashAlertDialog_SendButton");
 		if(tmpPtr != NULL) {
 			fTmpPtr = formatStr(tmpPtr, idPtr->params, idPtr->params_len);
 			SetWindowTextW(dHandle->btnOk, fTmpPtr);
@@ -579,7 +579,7 @@ void InitFlySwatterCrashDialog(HWND hWnd, LPFLYSWATTERCRASHALERTDIALOGINITDATA i
 	dHandle->btnCancel = CreateWindowEx(0, L"BUTTON", L"Cancel", WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON | BS_VCENTER | BS_CENTER | BS_TEXT, (cRect.right - (btnRect.right + btnRect.left)), (cRect.bottom - (btnRect.bottom + btnRect.top)), btnRect.right, btnRect.bottom, hWnd, NULL, fsgh_Instance, NULL);
 	if(dHandle->btnCancel != NULL) {
 		SetWindowLongPtrW(dHandle->btnCancel, GWLP_ID, IDC_BTN_CANCEL);
-		tmpPtr = (wchar_t*)FlySwatterGetParamEx(idPtr->params, idPtr->params_len, L"FlySwatter_CrashAlertDialog_CancelButton");
+		tmpPtr = (wchar_t*)FlyTrapGetParamEx(idPtr->params, idPtr->params_len, L"FlyTrap_CrashAlertDialog_CancelButton");
 		if(tmpPtr != NULL) {
 			fTmpPtr = formatStr(tmpPtr, idPtr->params, idPtr->params_len);
 			SetWindowTextW(dHandle->btnCancel, fTmpPtr);
@@ -593,7 +593,7 @@ void InitFlySwatterCrashDialog(HWND hWnd, LPFLYSWATTERCRASHALERTDIALOGINITDATA i
 	dHandle->btnGeneral = CreateWindowEx(0, L"BUTTON", L"Welcome", WS_CHILD | FSWS_ISVISIBLE(0) | BS_PUSHBUTTON | BS_VCENTER | BS_CENTER | BS_TEXT, txtRect.left, (cRect.bottom - ((btnRect.top * 2) + (btnRect.bottom * 3))), btnRect.right, btnRect.bottom, hWnd, NULL, fsgh_Instance, NULL);
 	if(dHandle->btnGeneral != NULL) {
 		SetWindowLongPtrW(dHandle->btnGeneral, GWLP_ID, IDC_BTN_GENERAL);
-		tmpPtr = (wchar_t*)FlySwatterGetParamEx(idPtr->params, idPtr->params_len, L"FlySwatter_CrashAlertDialog_Info1Button");
+		tmpPtr = (wchar_t*)FlyTrapGetParamEx(idPtr->params, idPtr->params_len, L"FlyTrap_CrashAlertDialog_Info1Button");
 		if(tmpPtr != NULL) {
 			fTmpPtr = formatStr(tmpPtr, idPtr->params, idPtr->params_len);
 			SetWindowTextW(dHandle->btnGeneral, fTmpPtr);
@@ -605,7 +605,7 @@ void InitFlySwatterCrashDialog(HWND hWnd, LPFLYSWATTERCRASHALERTDIALOGINITDATA i
 	dHandle->btnMoreInfo = CreateWindowEx(0, L"BUTTON", L"More Info", WS_CHILD | FSWS_ISVISIBLE(0) | BS_PUSHBUTTON | BS_VCENTER | BS_CENTER | BS_TEXT, txtRect.left, (cRect.bottom - ((btnRect.top * 2) + (btnRect.bottom * 3))), btnRect.right, btnRect.bottom, hWnd, NULL, fsgh_Instance, NULL);
 	if(dHandle->btnMoreInfo != NULL) {
 		SetWindowLongPtrW(dHandle->btnMoreInfo, GWLP_ID, IDC_BTN_MOREINFO);
-		tmpPtr = (wchar_t*)FlySwatterGetParamEx(idPtr->params, idPtr->params_len, L"FlySwatter_CrashAlertDialog_Info2Button");
+		tmpPtr = (wchar_t*)FlyTrapGetParamEx(idPtr->params, idPtr->params_len, L"FlyTrap_CrashAlertDialog_Info2Button");
 		if(tmpPtr != NULL) {
 			fTmpPtr = formatStr(tmpPtr, idPtr->params, idPtr->params_len);
 			SetWindowTextW(dHandle->btnMoreInfo, fTmpPtr);
@@ -617,13 +617,13 @@ void InitFlySwatterCrashDialog(HWND hWnd, LPFLYSWATTERCRASHALERTDIALOGINITDATA i
 	dHandle->btnPrivacy = CreateWindowEx(0, L"BUTTON", L"Privacy Info", WS_CHILD | FSWS_ISVISIBLE(0) | BS_PUSHBUTTON | BS_VCENTER | BS_CENTER | BS_TEXT, txtRect.left, (cRect.bottom - ((btnRect.top * 2) + (btnRect.bottom * 3))), btnRect.right, btnRect.bottom, hWnd, NULL, fsgh_Instance, NULL);
 	if(dHandle->btnPrivacy != NULL) {
 		SetWindowLongPtrW(dHandle->btnPrivacy, GWLP_ID, IDC_BTN_PRIVACY);
-		tmpPtr = (wchar_t*)FlySwatterGetParamEx(idPtr->params, idPtr->params_len, L"FlySwatter_CrashAlertDialog_Info3Button");
+		tmpPtr = (wchar_t*)FlyTrapGetParamEx(idPtr->params, idPtr->params_len, L"FlyTrap_CrashAlertDialog_Info3Button");
 		if(tmpPtr != NULL) {
 			fTmpPtr = formatStr(tmpPtr, idPtr->params, idPtr->params_len);
 			SetWindowTextW(dHandle->btnPrivacy, fTmpPtr);
 			free(fTmpPtr);
 		}
-		if(FlySwatterGetParamEx(idPtr->params, idPtr->params_len, L"FlySwatter_CrashAlertDialog_Info3Message") == NULL) {
+		if(FlyTrapGetParamEx(idPtr->params, idPtr->params_len, L"FlyTrap_CrashAlertDialog_Info3Message") == NULL) {
 			ShowWindow(dHandle->btnPrivacy, SW_HIDE);
 		}
 	}
@@ -634,7 +634,7 @@ void InitFlySwatterCrashDialog(HWND hWnd, LPFLYSWATTERCRASHALERTDIALOGINITDATA i
 	dHandle->chkDontAsk = CreateWindowEx(0, L"BUTTON", L"Don't ask me again!", WS_CHILD | BS_AUTOCHECKBOX | BS_VCENTER | BS_LEFT, btnRect.left, (cRect.bottom - (btnRect.top + btnRect.bottom - (chkRect.top/2))), ((cRect.right - btnRect.left) - (((btnRect.left + btnRect.right) * 2) + btnRect.left)), chkRect.bottom, hWnd, NULL, fsgh_Instance, NULL);
 	if(dHandle->chkDontAsk != NULL) {
 		SetWindowLongPtrW(dHandle->chkDontAsk, GWLP_ID, IDC_CHK_DONTASK);
-		tmpPtr = (wchar_t*)FlySwatterGetParamEx(idPtr->params, idPtr->params_len, L"FlySwatter_CrashAlertDialog_DontAskCheckbox");
+		tmpPtr = (wchar_t*)FlyTrapGetParamEx(idPtr->params, idPtr->params_len, L"FlyTrap_CrashAlertDialog_DontAskCheckbox");
 		if(tmpPtr != NULL) {
 			ShowWindow(dHandle->chkDontAsk, SW_SHOW);
 			fTmpPtr = formatStr(tmpPtr, idPtr->params, idPtr->params_len);
@@ -650,7 +650,7 @@ void InitFlySwatterCrashDialog(HWND hWnd, LPFLYSWATTERCRASHALERTDIALOGINITDATA i
 	dHandle->staticMain = CreateWindowEx(0, L"STATIC", L"Welcome Message", WS_VISIBLE | WS_CHILD | SS_LEFT /*| SS_BLACKRECT */| SS_NOPREFIX, txtRect.left, btnRect.top, (cRect.right - (txtRect.left + btnRect.left)), (cRect.bottom - ((btnRect.top * 4) + (btnRect.bottom * 3))), hWnd, NULL, fsgh_Instance, NULL);
 	if(dHandle->staticMain != NULL) {
 		SetWindowLongPtrW(dHandle->staticMain, GWLP_ID, IDC_STATIC_MAIN);
-		tmpPtr = (wchar_t*)FlySwatterGetParamEx(idPtr->params, idPtr->params_len, L"FlySwatter_CrashAlertDialog_WelcomeMessage");
+		tmpPtr = (wchar_t*)FlyTrapGetParamEx(idPtr->params, idPtr->params_len, L"FlyTrap_CrashAlertDialog_WelcomeMessage");
 		if(tmpPtr == NULL) {
 			tmpPtr = L"Something has caused {AppName} to crash and a crash report has been generated.\r\n\r\nThe crash report may contain confidential information from the program at the time it crashed.\r\n\r\nClick the 'Send' button to send this crash information to {CompanyShortName}.";
 		}
@@ -660,7 +660,7 @@ void InitFlySwatterCrashDialog(HWND hWnd, LPFLYSWATTERCRASHALERTDIALOGINITDATA i
 	}
 
 	// Set the window caption text
-	tmpPtr = (wchar_t*)FlySwatterGetParamEx(idPtr->params, idPtr->params_len, L"FlySwatter_CrashAlertDialog_Title");
+	tmpPtr = (wchar_t*)FlyTrapGetParamEx(idPtr->params, idPtr->params_len, L"FlyTrap_CrashAlertDialog_Title");
 	if(tmpPtr == NULL) {
 		tmpPtr = L"Crash detected!";
 	}
@@ -668,15 +668,15 @@ void InitFlySwatterCrashDialog(HWND hWnd, LPFLYSWATTERCRASHALERTDIALOGINITDATA i
 	SetWindowTextW(hWnd, fTmpPtr);
 	free(fTmpPtr);
 
-	FlySwatterLayoutCrashAlertDialog(dHandle, FALSE);
+	FlyTrapLayoutCrashAlertDialog(dHandle, FALSE);
 }
 
-INT_PTR CALLBACK FlySwatterCrashAlertDialogWndProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+INT_PTR CALLBACK FlyTrapCrashAlertDialogWndProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	LPFSCADHANDLE dHandle = (LPFSCADHANDLE)GetWindowLongPtr(hDlg, DWLP_USER);
 	switch(message) {
 		case WM_INITDIALOG:
-			InitFlySwatterCrashDialog(hDlg, (LPFLYSWATTERCRASHALERTDIALOGINITDATA)lParam);
+			InitFlyTrapCrashDialog(hDlg, (LPFLYTRAPCRASHALERTDIALOGINITDATA)lParam);
 			return((INT_PTR)TRUE);
 
 		case WM_COMMAND:
@@ -728,7 +728,7 @@ INT_PTR CALLBACK FlySwatterCrashAlertDialogWndProc(HWND hDlg, UINT message, WPAR
 	return((INT_PTR)FALSE);
 }
 
-int FlySwatterCrashAlert(const wchar_t *reportUrl, const wchar_t *miniDumpFilename, const LPFLYSWATTERPARAM params, const int params_len)
+int FlyTrapCrashAlert(const wchar_t *reportUrl, const wchar_t *miniDumpFilename, const LPFLYTRAPPARAM params, const int params_len)
 {
 	wchar_t *dumpPath = NULL;
 	wchar_t *dumpId = NULL;
@@ -763,7 +763,7 @@ int FlySwatterCrashAlert(const wchar_t *reportUrl, const wchar_t *miniDumpFilena
 	}
 
 	// display the dump info to the user and allow them to determine if they want to send a crash report
-	FLYSWATTERCRASHALERTDIALOGINITDATA idData;
+	FLYTRAPCRASHALERTDIALOGINITDATA idData;
 	idData.dumpFileName = (wchar_t*)miniDumpFilename;
 	idData.reportUrl = (wchar_t*)reportUrl;
 	idData.params = params;
@@ -772,7 +772,7 @@ int FlySwatterCrashAlert(const wchar_t *reportUrl, const wchar_t *miniDumpFilena
 	idData.dumpDir = dumpPath;
 	idData.useTabControl = USE_TAB_CONTROL_FOR_REPORTLAYOUT;
 	LPDLGTEMPLATE dlgTemplate = CreateFSWin32CrashAlertDlgTemplate();
-	int dialogResult = DialogBoxIndirectParamW(fsgh_Instance, dlgTemplate, NULL, FlySwatterCrashAlertDialogWndProc, (LPARAM)&idData);
+	int dialogResult = DialogBoxIndirectParamW(fsgh_Instance, dlgTemplate, NULL, FlyTrapCrashAlertDialogWndProc, (LPARAM)&idData);
 	free(dlgTemplate);
 	wchar_t buff[256];
 	switch(dialogResult) {
@@ -812,7 +812,7 @@ int FlySwatterCrashAlert(const wchar_t *reportUrl, const wchar_t *miniDumpFilena
 	wstring reportCode;
 
 	// determine if we need to use a checkpoint file and do so
-	wchar_t *tmpPtr = (wchar_t*)FlySwatterGetParamEx(params, params_len, L"FlySwatter_CheckpointSettings");
+	wchar_t *tmpPtr = (wchar_t*)FlyTrapGetParamEx(params, params_len, L"FlyTrap_CheckpointSettings");
 	if(tmpPtr == NULL) {
 		tmpPtr = wcsdup(L"");
 	} else {
