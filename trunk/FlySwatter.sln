@@ -1,4 +1,3 @@
-﻿
 Microsoft Visual Studio Solution File, Format Version 10.00
 # Visual Studio 2008
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "common", "breakpad\src\client\windows\common.vcproj", "{C918ACD4-A64B-B97E-5034-9093E143B902}"
@@ -11,7 +10,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "exception_handler", "breakp
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "crash_report_sender", "breakpad\src\client\windows\sender\crash_report_sender.vcproj", "{342BDEEB-1E8A-95F7-529A-902EF4649691}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FlySwatter", "FlySwatterClient\FlySwatterClient.vcproj", "{1B05914F-A58E-492C-95BE-8ACF0813E5BA}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FlyTrap", "FlyTrap\FlyTrap.vcproj", "{1B05914F-A58E-492C-95BE-8ACF0813E5BA}"
 	ProjectSection(ProjectDependencies) = postProject
 		{1E2EAF99-5703-4DE3-01BF-339A67FD4D61} = {1E2EAF99-5703-4DE3-01BF-339A67FD4D61}
 		{E866B0A8-E325-B2FF-B776-8C34DDDD3DBD} = {E866B0A8-E325-B2FF-B776-8C34DDDD3DBD}
@@ -149,15 +148,15 @@ Global
 		{1B05914F-A58E-492C-95BE-8ACF0813E5BA}.Debug|Any CPU.ActiveCfg = Debug|Win32
 		{1B05914F-A58E-492C-95BE-8ACF0813E5BA}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
 		{1B05914F-A58E-492C-95BE-8ACF0813E5BA}.Debug|Mixed Platforms.Build.0 = Debug|Win32
-		{1B05914F-A58E-492C-95BE-8ACF0813E5BA}.Debug|Win32.ActiveCfg = Debug|Win32
-		{1B05914F-A58E-492C-95BE-8ACF0813E5BA}.Debug|Win32.Build.0 = Debug|Win32
+		{1B05914F-A58E-492C-95BE-8ACF0813E5BA}.Debug|Win32.ActiveCfg = Release|Win32
+		{1B05914F-A58E-492C-95BE-8ACF0813E5BA}.Debug|Win32.Build.0 = Release|Win32
 		{1B05914F-A58E-492C-95BE-8ACF0813E5BA}.Debug|x64.ActiveCfg = Debug|Win32
-		{1B05914F-A58E-492C-95BE-8ACF0813E5BA}.Purify|Any CPU.ActiveCfg = DebugStaticCRT|Win32
-		{1B05914F-A58E-492C-95BE-8ACF0813E5BA}.Purify|Mixed Platforms.ActiveCfg = DebugStaticCRT|Win32
-		{1B05914F-A58E-492C-95BE-8ACF0813E5BA}.Purify|Mixed Platforms.Build.0 = DebugStaticCRT|Win32
-		{1B05914F-A58E-492C-95BE-8ACF0813E5BA}.Purify|Win32.ActiveCfg = DebugStaticCRT|Win32
-		{1B05914F-A58E-492C-95BE-8ACF0813E5BA}.Purify|Win32.Build.0 = DebugStaticCRT|Win32
-		{1B05914F-A58E-492C-95BE-8ACF0813E5BA}.Purify|x64.ActiveCfg = DebugStaticCRT|Win32
+		{1B05914F-A58E-492C-95BE-8ACF0813E5BA}.Purify|Any CPU.ActiveCfg = Release|Win32
+		{1B05914F-A58E-492C-95BE-8ACF0813E5BA}.Purify|Mixed Platforms.ActiveCfg = Release|Win32
+		{1B05914F-A58E-492C-95BE-8ACF0813E5BA}.Purify|Mixed Platforms.Build.0 = Release|Win32
+		{1B05914F-A58E-492C-95BE-8ACF0813E5BA}.Purify|Win32.ActiveCfg = Release|Win32
+		{1B05914F-A58E-492C-95BE-8ACF0813E5BA}.Purify|Win32.Build.0 = Release|Win32
+		{1B05914F-A58E-492C-95BE-8ACF0813E5BA}.Purify|x64.ActiveCfg = Release|Win32
 		{1B05914F-A58E-492C-95BE-8ACF0813E5BA}.Release|Any CPU.ActiveCfg = Release|Win32
 		{1B05914F-A58E-492C-95BE-8ACF0813E5BA}.Release|Mixed Platforms.ActiveCfg = Release|Win32
 		{1B05914F-A58E-492C-95BE-8ACF0813E5BA}.Release|Mixed Platforms.Build.0 = Release|Win32

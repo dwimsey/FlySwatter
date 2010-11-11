@@ -161,14 +161,14 @@ typedef struct __CrashTestDummy_DummyStruct {
 void DoManualReport(void *windowObject);
 void CCrashTestDummyDlg::OnBnClickedManualReport()
 {
-	// this just calls FlySwatterTriggerReport
+	// this just calls FlyTrapTriggerReport
 	DoManualReport(this);
 }
 
 void CCrashTestDummyDlg::OnBnClickedOk()
 {
 	LPCTD_DUMMYSTRUCT dummy = NULL;
-	dummy->dummyInt = 99;	// this will cause an exception, and hopefully trigger FlySwatter to do its thing.
+	dummy->dummyInt = 99;	// this will cause an exception, and hopefully trigger FlyTrap to do its thing.
 	//OnOK();
 }
 
