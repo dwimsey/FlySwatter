@@ -668,6 +668,9 @@ void InitFlyTrapCrashDialog(HWND hWnd, LPFLYTRAPCRASHALERTDIALOGINITDATA idPtr)
 	SetWindowTextW(hWnd, fTmpPtr);
 	free(fTmpPtr);
 
+	SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOREPOSITION | SWP_NOMOVE | SWP_SHOWWINDOW);
+	SetWindowPos(hWnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOREPOSITION | SWP_NOMOVE | SWP_SHOWWINDOW);
+	SetWindowPos(hWnd, HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOREPOSITION | SWP_NOMOVE | SWP_SHOWWINDOW);
 	FlyTrapLayoutCrashAlertDialog(dHandle, FALSE);
 }
 
@@ -728,7 +731,7 @@ INT_PTR CALLBACK FlyTrapCrashAlertDialogWndProc(HWND hDlg, UINT message, WPARAM 
 	return((INT_PTR)FALSE);
 }
 
-int FlyTrapCrashAlert(const wchar_t *reportUrl, const wchar_t *miniDumpFilename, const LPFLYTRAPPARAM params, const int params_len)
+int FlyTrapCrashAlert(void *parentWindowHandle, const wchar_t *reportUrl, const wchar_t *miniDumpFilename, const LPFLYTRAPPARAM params, const int params_len)
 {
 	wchar_t *dumpPath = NULL;
 	wchar_t *dumpId = NULL;
@@ -772,7 +775,7 @@ int FlyTrapCrashAlert(const wchar_t *reportUrl, const wchar_t *miniDumpFilename,
 	idData.dumpDir = dumpPath;
 	idData.useTabControl = USE_TAB_CONTROL_FOR_REPORTLAYOUT;
 	LPDLGTEMPLATE dlgTemplate = CreateFSWin32CrashAlertDlgTemplate();
-	int dialogResult = DialogBoxIndirectParamW(fsgh_Instance, dlgTemplate, NULL, FlyTrapCrashAlertDialogWndProc, (LPARAM)&idData);
+	int dialogResult = DialogBoxIndirectParamW(fsgh_Instance, dlgTemplate, (HWND)parentWindowHandle, FlyTrapCrashAlertDialogWndProc, (LPARAM)&idData);
 	free(dlgTemplate);
 	wchar_t buff[256];
 	switch(dialogResult) {
@@ -783,7 +786,7 @@ int FlyTrapCrashAlert(const wchar_t *reportUrl, const wchar_t *miniDumpFilename,
 		default:
 			// anything else is an error, we're going to send the report anyway
 			wsprintf(buff, L"This application has crashed, however the error reporting dialog could not be displayed or failed(%u).  Would you like to send a crash report anyway?", dialogResult);
-			if(MessageBoxW(NULL, buff, L"Application crash detected!", MB_OKCANCEL) != IDOK) {
+			if(MessageBoxW((HWND)parentWindowHandle, buff, L"Application crash detected!", MB_OKCANCEL) != IDOK) {
 				if(dumpId != NULL)
 					free(dumpId);
 				if(dumpPath != NULL)
@@ -851,26 +854,26 @@ int FlyTrapCrashAlert(const wchar_t *reportUrl, const wchar_t *miniDumpFilename,
 	switch(rs) {
 		case RESULT_FAILED:		// Failed to communicate with the server; try later.
 			_sntprintf(buf, 1024, L"Upload failed: %s", reportCode.c_str());
-			MessageBox(NULL, buf, L"Crash report could not be sent", MB_OK|MB_ICONHAND);
+			MessageBox((HWND)parentWindowHandle, buf, L"Crash report could not be sent", MB_OK|MB_ICONHAND);
 			returnVal += -1;
 			break;
 		case RESULT_REJECTED:	// Successfully sent the crash report, but the server rejected it; don't resend this report.
 			_sntprintf(buf, 1024, L"Upload completed, but rejected by server: (No Reason): %s", reportCode.c_str());
-			MessageBox(NULL, buf, L"Crash report was not accepted", MB_OK|MB_ICONHAND);
+			MessageBox((HWND)parentWindowHandle, buf, L"Crash report was not accepted", MB_OK|MB_ICONHAND);
 			break;
 		case RESULT_SUCCEEDED:	// The server accepted the crash report.
 			_sntprintf(buf, 1024, L"Crash report sent: %s", reportCode.c_str());
 			returnVal += 1;
-			//MessageBox(NULL, buf, L"Crash report accepted", MB_OK|MB_ICONHAND);
+			MessageBox((HWND)parentWindowHandle, buf, L"Crash report accepted", MB_OK|MB_ICONHAND);
 			break;
 		case RESULT_THROTTLED:	// No attempt was made to send the crash report, because we exceeded the maximum reports per day.
 			_sntprintf(buf, 1024, L"You have already sent %d reports today, no more reports will be accepted until tomorrow.", cs.max_reports_per_day());
-			MessageBox(NULL, buf, L"Too many reports sent for today", MB_OK|MB_ICONHAND);
+			MessageBox((HWND)parentWindowHandle, buf, L"Too many reports sent for today", MB_OK|MB_ICONHAND);
 			returnVal += -3;
 			break;
 		default:
 			_sntprintf(buf, 1024, L"Report Result: %u: %s", rs, reportCode.c_str());
-			MessageBox(NULL, buf, L"Unexpected response from report sender", MB_OK|MB_ICONHAND);
+			MessageBox((HWND)parentWindowHandle, buf, L"Unexpected response from report sender", MB_OK|MB_ICONHAND);
 			returnVal += -4;
 	}
 

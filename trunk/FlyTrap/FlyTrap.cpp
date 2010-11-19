@@ -619,10 +619,10 @@ void FlyTrapOutOfProcessDumpCallback(void *dump_context, ClientInfo *client_info
 
 	if(dump_path != NULL) {
 		const wchar_t *dPath = dump_path->c_str();
-		FlyTrapCrashAlert(serverContext->reportUrl, dPath, params, ccInfo.count);
+		FlyTrapCrashAlert(NULL, serverContext->reportUrl, dPath, params, ccInfo.count);
 		_wunlink(dPath);
 	} else {
-		FlyTrapCrashAlert(serverContext->reportUrl, NULL, params, ccInfo.count);
+		FlyTrapCrashAlert(NULL, serverContext->reportUrl, NULL, params, ccInfo.count);
 	}
 	if(params != NULL) {
 		free(params);
@@ -645,16 +645,16 @@ bool FlyTrapInProcessDumpCallback(const wchar_t *dumpPath, const wchar_t *dumpId
 	wchar_t miniDumpFilename[1025];
 	if(dumpSucceeded == true) {
 		if(dumpPath == NULL || dumpId == NULL) {
-			FlyTrapCrashAlert(ctx->reportUrl, NULL, ctx->params, ctx->params_len);
+			FlyTrapCrashAlert(NULL, ctx->reportUrl, NULL, ctx->params, ctx->params_len);
 		} else {
 			wsprintf(miniDumpFilename, L"%s\\%s.dmp", dumpPath, dumpId);
 			miniDumpFilename[1023] = L'\0';
-			FlyTrapCrashAlert(ctx->reportUrl, miniDumpFilename, ctx->params, ctx->params_len);
+			FlyTrapCrashAlert(NULL, ctx->reportUrl, miniDumpFilename, ctx->params, ctx->params_len);
 			// the minidump should already be gone, but we're going to remove it again anyway to be safe
 			_wunlink(miniDumpFilename);
 		}
 	} else {
-		FlyTrapCrashAlert(ctx->reportUrl, NULL, ctx->params, ctx->params_len);
+		FlyTrapCrashAlert(NULL, ctx->reportUrl, NULL, ctx->params, ctx->params_len);
 	}
 
 	return(true);
@@ -1075,12 +1075,8 @@ map<wstring, wstring> *CreateParamMap(const LPFLYTRAPPARAM params, const int par
 				}
 			}
 		}
-		
-		
-		
-		(*paramsStr)[params[i].name] = params[i].value;
 
-		
+		(*paramsStr)[params[i].name] = params[i].value;
 	}
 	return(paramsStr);
 }
