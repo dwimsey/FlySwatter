@@ -988,6 +988,7 @@ map<wstring, wstring> *CreateParamMap(const LPFLYTRAPPARAM params, const int par
 	wchar_t *tb;
 	int fSize = 0;
 	int fr;
+	wchar_t *expandedFName = NULL;
 
 	for(int i = 0; i < params_len; i++) {
 		if(params[i].name == NULL) {
@@ -1017,10 +1018,13 @@ map<wstring, wstring> *CreateParamMap(const LPFLYTRAPPARAM params, const int par
 						// fnameBuf now represents the current filename we're trying to load
 						// load the file and generate outBuf
 						if(wcslen(fnameBuf) > 0) {
-							fp = _wfopen(fnameBuf, L"rb");
+							expandedFName = ExpandEnvVarsInStr(fnameBuf);
+							fp = _wfopen(expandedFName, L"rb");
 							if(fp == NULL) {
-								outBuf = mprintf(L"%s;-2;File could not be opened for reading: %d", fnameBuf, _errno());
+								outBuf = mprintf(L"%s;-2;File could not be opened for reading: %d", expandedFName, _errno());
+								free(expandedFName);
 							} else {
+								free(expandedFName);
 								outBuf = wcsdup(L"");
 								while(!feof(fp)) {
 									// loop through the file reading in the data and adding it to the base64 encoded output
@@ -1049,7 +1053,10 @@ map<wstring, wstring> *CreateParamMap(const LPFLYTRAPPARAM params, const int par
 								}
 								fclose(fp);
 								tb = outBuf;
-								outBuf = mprintf(L"%s;%d;%s", fnameBuf, fSize, tb);
+
+								expandedFName = ExpandEnvVarsInStr(fnameBuf);
+								outBuf = mprintf(L"%s;%d;%s", expandedFName, fSize, tb);
+								free(expandedFName);
 								free(tb);
 							}
 						} else {
@@ -1069,10 +1076,13 @@ map<wstring, wstring> *CreateParamMap(const LPFLYTRAPPARAM params, const int par
 						// fnameBuf now represents the current filename we're trying to load
 						// load the file and generate outBuf
 						if(wcslen(fnameBuf) > 0) {
+							expandedFName = ExpandEnvVarsInStr(fnameBuf);
 							fp = _wfopen(fnameBuf, L"rb");
 							if(fp == NULL) {
 								outBuf = mprintf(L"%s;-2;File could not be opened for reading: %d.", fnameBuf, _errno());
+								free(expandedFName);
 							} else {
+								free(expandedFName);
 								outBuf = wcsdup(L"");
 								while(!feof(fp)) {
 									// loop through the file reading in the data and adding it to the base64 encoded output
@@ -1102,7 +1112,9 @@ map<wstring, wstring> *CreateParamMap(const LPFLYTRAPPARAM params, const int par
 								}
 								fclose(fp);
 								tb = outBuf;
-								outBuf = mprintf(L"%s;%d;%s", fnameBuf, fSize, tb);
+								expandedFName = ExpandEnvVarsInStr(fnameBuf);
+								outBuf = mprintf(L"%s;%d;%s", expandedFName, fSize, tb);
+								free(expandedFName);
 								free(tb);
 							}
 						} else {
