@@ -41,6 +41,8 @@ typedef struct __FlyTrapContextData {
 
 typedef struct __FlyTrapServerContextData {
 	CrashGenerationServer *server;
+	HANDLE processHandle;
+	volatile LONG windowsWaittingCount;
 	wchar_t *reportUrl;
 	wchar_t dumpPath[MAX_PATH_LEN+3];
 } FLYTRAPSERVERCONTEXT, *LPFLYTRAPSERVERCONTEXT;
@@ -105,15 +107,15 @@ extern "C" __declspec (dllexport) void __cdecl FlyTrapRunDLLLaunchServerW(HWND h
 		MessageBoxW(NULL, pipeName, L"Could not initialized FlyTrap server.", MB_OK);
 		return;
 	}
+
 	// Open the calling process to wait for it to finish.
 	HANDLE pHandle = OpenProcess(SYNCHRONIZE, FALSE, pid);
 	// When the wait returns, the original process has exited and so should we
 	DWORD res = WaitForSingleObject(pHandle, 1000);
-	while( res == 258 ) {
+	while( res == 258 || sCtx->windowsWaittingCount > 0 ) {
 		Sleep(100);
 		res = WaitForSingleObject(pHandle, 100);
 	}
-
 	FlyTrapShutdownServer(sCtx);
 }
 
@@ -597,36 +599,135 @@ bool FlyTrapExceptionFilter(void *ctx, EXCEPTION_POINTERS *exceptionInfo, MDRawA
 	return(true);
 }
 
+typedef struct __FlyTrapOutOfProcessCallbackData {
+	LPFLYTRAPSERVERCONTEXT serverContext;
+	const wchar_t *dump_path;
+	unsigned int pCount;
+	LPFLYTRAPPARAM params;
+} FTOOPCDATA, *LPFTOOPCDATA;
+
+DWORD WINAPI FlyTrapOutOfProcessDumpCallbackThread(LPVOID iValue)
+{
+	LPFTOOPCDATA ftOopcData = (LPFTOOPCDATA)iValue;
+	if(ftOopcData != NULL) {
+		if(ftOopcData->dump_path != NULL) {
+			FlyTrapCrashAlert(NULL, ftOopcData->serverContext->reportUrl, ftOopcData->dump_path, ftOopcData->params, ftOopcData->pCount);
+			_wunlink(ftOopcData->dump_path);
+			free((void*)ftOopcData->dump_path);
+		} else {
+			FlyTrapCrashAlert(NULL, ftOopcData->serverContext->reportUrl, NULL, ftOopcData->params, ftOopcData->pCount);
+		}
+		if(ftOopcData->params != NULL) {
+			for(unsigned int i = 0; i < ftOopcData->pCount; i++) {
+				if(ftOopcData->params[i].name != NULL) {
+					free(ftOopcData->params[i].name);
+				}
+				if(ftOopcData->params[i].value != NULL) {
+					free(ftOopcData->params[i].value);
+				}
+			}
+			free(ftOopcData->params);
+		}
+		if(ftOopcData->serverContext != NULL) {
+			InterlockedDecrement(&ftOopcData->serverContext->windowsWaittingCount);
+		}
+		free(ftOopcData);
+	}
+	return(0);
+}
+
 void FlyTrapOutOfProcessDumpCallback(void *dump_context, ClientInfo *client_info, const std::wstring *dump_path)
 {
-	LPFLYTRAPPARAM params;
+	LPFLYTRAPPARAM params = NULL;
 	LPFLYTRAPSERVERCONTEXT serverContext = (LPFLYTRAPSERVERCONTEXT)dump_context;
-	CustomClientInfo ccInfo = client_info->GetCustomInfo();
 
-	if(ccInfo.count > 0) {
-		params = (LPFLYTRAPPARAM)malloc(sizeof(FLYTRAPPARAM) * ccInfo.count);
-		if(params == NULL) {
+	unsigned int pCount = 0;
+	if(client_info != NULL) {
+		CustomClientInfo ccInfo = client_info->GetCustomInfo();
+		if(ccInfo.count > 0) {
+			pCount = ccInfo.count;
+			// this will be free'd by the thread we start
+			params = (LPFLYTRAPPARAM)malloc(sizeof(FLYTRAPPARAM) * pCount);
+			if(params == NULL) {
+				/// @TODO Handle this error in some way to let someone know it happened
+				return;
+			}
+			for(unsigned int i = 0; i < pCount; i++) {
+				if(ccInfo.entries[i].name != NULL) {
+					params[i].name = wcsdup(ccInfo.entries[i].name);
+				} else {
+					params[i].name = NULL;
+				}
+				if(ccInfo.entries[i].value != NULL) {
+					params[i].value = wcsdup(ccInfo.entries[i].value);
+				} else {
+					params[i].value = NULL;
+				}
+			}
+		}
+	}
+
+	// this will be free'd by the thread we start
+	LPFTOOPCDATA ftOopcData = (LPFTOOPCDATA)malloc(sizeof(FTOOPCDATA));
+	if(ftOopcData == NULL) {
+		/// @TODO Handle this error in some way to let someone know it happened
+		if(params != NULL) {
+			free(params);
+		}
+		return;
+	}
+	ftOopcData->params = params;
+	ftOopcData->pCount = pCount;
+	ftOopcData->serverContext = serverContext;
+	// this will be free'd by the thread we start
+	if(dump_path != NULL) {
+		ftOopcData->dump_path = wcsdup(dump_path->c_str());
+		if(ftOopcData->dump_path == NULL) {
 			/// @TODO Handle this error in some way to let someone know it happened
+			if(ftOopcData->params != NULL) {
+				for(unsigned int i = 0; i < ftOopcData->pCount; i++) {
+					if(ftOopcData->params[i].name != NULL) {
+						free(ftOopcData->params[i].name);
+					}
+					if(ftOopcData->params[i].value != NULL) {
+						free(ftOopcData->params[i].value);
+					}
+				}
+				free(ftOopcData->params);
+			}
+			free(ftOopcData);
 			return;
 		}
-		for(unsigned int i = 0; i < ccInfo.count; i++) {
-			params[i].name = (wchar_t*)&ccInfo.entries[i].name;
-			params[i].value = (wchar_t*)&ccInfo.entries[i].value;
-		}
 	} else {
-		params = NULL;
+		ftOopcData->dump_path = NULL;
 	}
 
-	if(dump_path != NULL) {
-		const wchar_t *dPath = dump_path->c_str();
-		FlyTrapCrashAlert(NULL, serverContext->reportUrl, dPath, params, ccInfo.count);
-		_wunlink(dPath);
-	} else {
-		FlyTrapCrashAlert(NULL, serverContext->reportUrl, NULL, params, ccInfo.count);
+	HANDLE ftcbThread;
+	DWORD ftcbThreadId;
+	InterlockedIncrement(&ftOopcData->serverContext->windowsWaittingCount);
+	ftcbThread = CreateThread(NULL, 0, FlyTrapOutOfProcessDumpCallbackThread, ftOopcData, 0, &ftcbThreadId);
+	if(ftcbThread == NULL) {
+		// the thread wasn't started, we'll need to cleanup ourselves
+		InterlockedDecrement(&ftOopcData->serverContext->windowsWaittingCount);
+		if(ftOopcData->params != NULL) {
+			for(unsigned int i = 0; i < ftOopcData->pCount; i++) {
+				if(ftOopcData->params[i].name != NULL) {
+					free(ftOopcData->params[i].name);
+				}
+				if(ftOopcData->params[i].value != NULL) {
+					free(ftOopcData->params[i].value);
+				}
+			}
+			free(ftOopcData->params);
+		}
+		if(ftOopcData->dump_path != NULL) {
+			free((void*)ftOopcData->dump_path);
+		}
+		free(ftOopcData);
+		return;
 	}
-	if(params != NULL) {
-		free(params);
-	}
+	CloseHandle(ftcbThread);
+
 }
 
 bool FlyTrapInProcessDumpCallback(const wchar_t *dumpPath, const wchar_t *dumpId, void *mctx, EXCEPTION_POINTERS *exceptionInfo, MDRawAssertionInfo *assertionInfo, bool dumpSucceeded)
