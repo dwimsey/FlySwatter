@@ -32,12 +32,38 @@ void DoManualReport(void *windowObject)
 CCrashTestDummyApp::CCrashTestDummyApp()
 {
 	int rVal;
-	// Use in process exception handling
-//	FLYTRAPINITCLIENT(rVal, FlyTrap, L"%APPDATA%\\CrashTestDummy", L"http://flytrap.notresponsible.org/report.php", NULL, L"FlyTrap.dll");
 
-	// Use Out of Process exception handling, using the builtin FlyTrap crash server.
-	FLYTRAPINITCLIENT(rVal, FlyTrap, L"%APPDATA%\\CrashTestDummy", L"http://flytrap.notresponsible.org/report.php", L"FlyTrap.dll", L"FlyTrap.dll");
+	LPWSTR *szArglist;
+	int nArgs;
+	int inProcServer = 0;
+	szArglist = CommandLineToArgvW(GetCommandLineW(), &nArgs);
+	if( NULL != szArglist ) {
+		for(int i=0; i<nArgs; i++) {
+			if(wcsicmp(L"-InProcServer", szArglist[i]) == 0) {
+				inProcServer = 1;
+			} else if((wcsicmp(L"-h", szArglist[i]) == 0) || (wcsicmp(L"--h", szArglist[i]) == 0) || (wcsicmp(L"-?", szArglist[i]) == 0) || (wcsicmp(L"--?", szArglist[i]) == 0) || (wcsicmp(L"/?", szArglist[i]) == 0) || (wcsicmp(L"/h", szArglist[i]) == 0) || (wcsicmp(L"/help", szArglist[i]) == 0) || (wcsicmp(L"/?", szArglist[i]) == 0)) {
+				MessageBoxW(NULL, 
+					L"-InProcServer    - Start this application without using rundll32.exe and flytrap.dll to run an external crash handler application.\r\n"
+					L"-h               - Show this help."
+					, L"Help", MB_OK);
+				exit(0);
+			}
+		}
+	}
+	// Free memory allocated for CommandLineToArgvW arguments.
+	LocalFree(szArglist);
 
+
+
+
+
+	if(inProcServer == 1) {
+		// Use in process exception handling
+		FLYTRAPINITCLIENT(rVal, FlyTrap, L"%APPDATA%\\CrashTestDummy", L"http://10.27.1.242/~dwimsey/sendreport.php", NULL, L"FlyTrap.dll");
+	} else {
+		// Use Out of Process exception handling, using the builtin FlyTrap crash server.
+		FLYTRAPINITCLIENT(rVal, FlyTrap, L"%APPDATA%\\CrashTestDummy", L"http://10.27.1.242/~dwimsey/sendreport.php", L"FlyTrap.dll", L"FlyTrap.dll");
+	}
 	// @TODO Add this to real documentation system so it can be published somewhere useful
 	// These are used in various other predefined template strings and recommended for all crash reports
 	FlyTrapSetParam(L"AppName", L"CrashTest Dummy");
