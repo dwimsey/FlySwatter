@@ -1,4 +1,4 @@
-/*! @file FlyTrap.h
+/*! @file FlyTrap.h FlyTrap API Reference
  * @brief FlyTrap API Reference
  *
  * @author David Wimsey
@@ -148,7 +148,8 @@ typedef void (__stdcall *flytrap_triggerreport_func_ptr)(void);
 
 #ifdef FLYTRAP_IMPLICIT_DECLARATIONS
 
-/*!
+/*! @brief Initialize the FlyTrap client library and prepare it for use.
+ *
  * @param dumpPath Path where dump files should be written.  This path must be writable by the process,
  * however it does not need to be persistent as the data is deleted after the report is sent.
  * @param reportUrl Address to which crash reports will be submitted.  This server should be prepared to
@@ -159,10 +160,37 @@ typedef void (__stdcall *flytrap_triggerreport_func_ptr)(void);
  * @returns 1 on success
  */
 FLYTRAP_API int __stdcall FlyTrapInitClient(wchar_t *dumpPath, wchar_t *reportUrl, wchar_t *OOPExePath);
+/*! @brief Shutdown the FlyTrap client library and release memory associated with it.
+ *
+ * @param[in] clientContext The context you wish to shut down.
+ * @returns @enum FLYTRAP_ERRORCODE
+ */
 FLYTRAP_API int __stdcall FlyTrapShutdownClient(void *clientContext);
+/*! @brief Shutdown a FlyTrap server 
+ *
+ * Shuts down the server specified in serverContext.  If @ref OOP is enabled
+ * the client will disconnect from the server which may result in it
+ * shutting down if the client is the only connected client.
+ *
+ * The exception handler for the associated with this context will be removed if possible otherwise
+ * it will be disabled.
+ *
+ * All memory associated with the context will be released, including any parameters set.
+ *
+ * @param[in] serverContext The context you wish to shut down.
+ * @returns @enum FLYTRAP_ERRORCODE
+ */
 FLYTRAP_API int __stdcall FlyTrapShutdownServer(void *serverContext);
+/*! @brief Initialize a FlyTrap server thread.
+ *
+ * @param[in] dumpPath Path where temporary dump files can be written when an error report is being generated.  The server process must have permission to create and write to files in this directory.
+ * @param[in] reportUrl URL to upload reports to.  @Note This connection should be made using SSL to ensure the privacy of possibly sensitive data contained in error reports.
+ * @param[in] pipeName Path or name of the IPC pipe used for communication between the client and server.
+ * @param[in] serverReadyEventName Name of IPC event to signal when the server is ready to accept connections.
+ */
 FLYTRAP_API void * __stdcall FlyTrapInitServer(wchar_t *dumpPath, wchar_t *reportUrl, wchar_t *pipeName, wchar_t *serverReadyEventName);
-/*!
+/*! @brief Enable FlyTrap error reporting
+ *
  * Enables FlyTrap processing of exceptions.  If exceptions are currently enabled, this function does nothing.
  * If FlyTrap has been previously enabled, when this function returns FlyTrap will trap unhandled exception
  * using the configuration supplied with the first call to @ref FlyTrapEnable.
@@ -181,7 +209,8 @@ FLYTRAP_API void * __stdcall FlyTrapInitServer(wchar_t *dumpPath, wchar_t *repor
  *			-2 - if the exception handler could not be enabled
  */
 FLYTRAP_API int __stdcall FlyTrapEnable();
-/*!
+/*! @brief Disable FlyTrap error reporting.
+ *
  * Disables FlyTrap processing of exceptions.  If exceptions are not currently enabled, this function does nothing.
  * If FlyTrap is handling exceptions, after this function returns FlyTrap will no longer handle exceptions until
  * @ref FlyTrapEnable has been called.
@@ -189,14 +218,28 @@ FLYTRAP_API int __stdcall FlyTrapEnable();
  * @returns 1 if previously enabled, 0 if not previously enabled. -1 if there is no context for this thread. -2 if the exception handler could not be enabled
  */
 FLYTRAP_API int __stdcall FlyTrapDisable();
-/*!
+/*! @brief Determine if FlyTrap error reporting is enabled.
+ *
  * Used to determine if exceptions are currently being handled by FlyTrap.
  *
  * @returns 1 if previously enabled, 0 if not previously enabled. -1 if there is no context for this thread. -2 if the exception handler could not be enabled
  */
 FLYTRAP_API int __stdcall FlyTrapIsEnabled();
+/*! @brief Set a parameter or configuration option.
+ *
+ * Sets the value of the parameter specified by @ref name.
+ * @param[in] name Name of value to set.
+ * @param[in] value Value to set.
+ */
 FLYTRAP_API void __stdcall FlyTrapSetParam(const wchar_t *name, const wchar_t *value);
+/*! @brief Get the value of a configured parameter or option.
+ *
+ * @return A unicode string representing the value stored for the named option.
+ */
 FLYTRAP_API const wchar_t * __stdcall FlyTrapGetParam(const wchar_t *name);
+/*! @brief Manually trigger the error reporting process.
+ *
+ */
 FLYTRAP_API void __stdcall FlyTrapTriggerReport();
 
 #endif // FLYTRAP_IMPLICIT_DECLARATIONS
