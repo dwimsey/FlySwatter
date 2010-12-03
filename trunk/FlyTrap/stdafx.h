@@ -27,44 +27,17 @@
 #include <atlbase.h>
 #include <atlstr.h>
 
-#define FLYTRAP_VERSION_MAJOR 0
-#define FLYTRAP_VERSION_MINOR 1
-#define FLYTRAP_VERSION_PATCH 2
-#define FLYTRAP_VERSION_BUILD 3
-#define FLYTRAP_VERSION_STRING "0.6.0.35\0\0"
-
-#ifndef FLYTRAP_API
-//#if defined(_WIN32_WCE)
-	#ifdef FLYTRAP_EXPORTS
-//		#define FLYTRAP_API __declspec(dllexport)
-		#define FLYTRAP_API
-	#else
-		#define FLYTRAP_API __declspec(dllimport)
-	#endif
-//#else
-//	#define FLYTRAP_API
-//#endif
-#endif // !FLYTRAP_API
-
 #include "client/windows/handler/exception_handler.h"
 #include "client/windows/sender/crash_report_sender.h"
 #include "client/windows/crash_generation/client_info.h"
 
 using namespace google_breakpad;
 
+#define FLYTRAP_IMPLICIT_DECLARATIONS 1
 #include "FlyTrap.h"
 
 extern "C" {
-	FLYTRAP_API int __stdcall FlyTrapInitClient(wchar_t *dump_path, wchar_t *reportUrl, wchar_t *OOPExePath);
-	FLYTRAP_API int __stdcall FlyTrapShutdownClient(void *clientContext);
-	FLYTRAP_API void * __stdcall FlyTrapInitServer(wchar_t *dumpPath, wchar_t *reportUrl, wchar_t *pipeName, wchar_t *serverReadyEventName);
-	FLYTRAP_API int __stdcall FlyTrapShutdownServer(void *serverContext);
-	FLYTRAP_API int __stdcall FlyTrapEnable();
-	FLYTRAP_API int __stdcall FlyTrapDisable();
-	FLYTRAP_API int __stdcall FlyTrapIsEnabled();
-	FLYTRAP_API void __stdcall FlyTrapSetParam(const wchar_t *name, const wchar_t *value);
-	FLYTRAP_API const wchar_t * __stdcall FlyTrapGetParam(const wchar_t *name);
-	FLYTRAP_API void __stdcall FlyTrapTriggerReport(void);
+
 
 	// This are used internally and need to be available to all bits
 	int FlyTrapCrashAlert(void *parentWindowHandle, const wchar_t *reportUrl, const wchar_t *miniDumpFilename, const LPFLYTRAPPARAM params, const int params_len);

@@ -39,9 +39,9 @@ CCrashTestDummyApp::CCrashTestDummyApp()
 	szArglist = CommandLineToArgvW(GetCommandLineW(), &nArgs);
 	if( NULL != szArglist ) {
 		for(int i=0; i<nArgs; i++) {
-			if(wcsicmp(L"-InProcServer", szArglist[i]) == 0) {
+			if(_wcsicmp(L"-InProcServer", szArglist[i]) == 0) {
 				inProcServer = 1;
-			} else if((wcsicmp(L"-h", szArglist[i]) == 0) || (wcsicmp(L"--h", szArglist[i]) == 0) || (wcsicmp(L"-?", szArglist[i]) == 0) || (wcsicmp(L"--?", szArglist[i]) == 0) || (wcsicmp(L"/?", szArglist[i]) == 0) || (wcsicmp(L"/h", szArglist[i]) == 0) || (wcsicmp(L"/help", szArglist[i]) == 0) || (wcsicmp(L"/?", szArglist[i]) == 0)) {
+			} else if((_wcsicmp(L"-h", szArglist[i]) == 0) || (_wcsicmp(L"--h", szArglist[i]) == 0) || (wcscmp(L"-?", szArglist[i]) == 0) || (wcscmp(L"--?", szArglist[i]) == 0) || (wcscmp(L"/?", szArglist[i]) == 0) || (_wcsicmp(L"/h", szArglist[i]) == 0) || (_wcsicmp(L"/help", szArglist[i]) == 0) || (wcscmp(L"/?", szArglist[i]) == 0)) {
 				MessageBoxW(NULL, 
 					L"-InProcServer    - Start this application without using rundll32.exe and flytrap.dll to run an external crash handler application.\r\n"
 					L"-h               - Show this help."

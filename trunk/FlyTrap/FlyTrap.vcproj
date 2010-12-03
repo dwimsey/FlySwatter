@@ -248,6 +248,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\flytrapversion.h"
+				>
+			</File>
+			<File
 				RelativePath=".\mswindows\resource.h"
 				>
 			</File>
@@ -270,6 +274,40 @@
 				>
 			</File>
 		</Filter>
+		<File
+			RelativePath="..\scripts\buildver.py"
+			>
+			<FileConfiguration
+				Name="Debug|Win32"
+				>
+				<Tool
+					Name="VCCustomBuildTool"
+					Description="Generating version information ..."
+					CommandLine="$(InputPath)&#x0D;&#x0A;"
+					AdditionalDependencies="FlyTrap.h FlyTrap.cpp CrashAlert_Window.cpp FlyTrap.rc"
+					Outputs="FlyTrapVersion.h"
+				/>
+			</FileConfiguration>
+		</File>
+		<File
+			RelativePath=".\FlyTrap.doxygen"
+			>
+			<FileConfiguration
+				Name="Debug|Win32"
+				>
+				<Tool
+					Name="VCCustomBuildTool"
+					Description="Compiling documentation ..."
+					CommandLine="doxygen $(InputPath)&#x0D;&#x0A;"
+					AdditionalDependencies="FlyTrap.h FlyTrap.cpp"
+					Outputs="z:\docs\index.html"
+				/>
+			</FileConfiguration>
+		</File>
+		<File
+			RelativePath=".\pages.doxy"
+			>
+		</File>
 		<File
 			RelativePath=".\ReadMe.txt"
 			>

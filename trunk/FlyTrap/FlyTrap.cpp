@@ -1,14 +1,40 @@
-// Copyright 2005-2007, Research Triangle Software, Inc.  All rights reserved.
-/*!	@file main.c
- * This file contains the bulk of the code used support for encrypted archives created
- * using the RTS cryptography library
+/*! @internal
+ * @file FlyTrap.cpp
+ * This file contains glue which initializes google breakpad and allows
+ * the caller to control how FlyTrap behaves.
  *
- * @brief RTS crypto library main implementation
- * @author David Wimsey <dwimsey@rtsz.com>
- * @version $Revision: 1.130 $
- * @date 2005-2007
- * @todo Zero byte files should never hit the compression engine, as they just add space rather than save it
- * @todo add metadata file type which will never be directly decrypted/decompressed, for storing future archive info
+ * @brief FlyTrap glue implementation
+ * @author David Wimsey
+ * @version $Revisiona$
+ * @date 2003-2010
+ *
+ *
+ * LICENSE
+ *
+ * Copyright (c) 2003-2010, David Wimsey
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  */
 
 // FlyTrap.cpp : Defines the exported functions for the DLL application.
@@ -297,7 +323,7 @@ FLYTRAP_API int __stdcall FlyTrapInitClient(wchar_t *dumpPath, wchar_t *reportUr
 
 	if(lctx != NULL) {
 		// the structure pointer shouldn't be initialized, something is wrong
-		return(-1);
+		return(FLYTRAP_ERROR_NO_CONTEXT);
 	}
 
 	// Allocate some memory that we can protect later, we want to do it at the top of the address space
@@ -305,7 +331,7 @@ FLYTRAP_API int __stdcall FlyTrapInitClient(wchar_t *dumpPath, wchar_t *reportUr
 	// at the bottom of the address space
 	LPFLYTRAPCONTEXT clientContext = (LPFLYTRAPCONTEXT)VirtualAlloc(NULL, sizeof(FLYTRAPCONTEXT), MEM_COMMIT | MEM_RESERVE | MEM_TOP_DOWN, PAGE_READWRITE);
 	if(clientContext == NULL) {
-		return(-2);
+		return(FLYTRAP_ERROR_OUTOFMEMORY);
 	}
 	// We shouldn't need to do this as VirtualAlloc is supposed to do it
 	// But we do it anyway so we know where we stand, crash handlers need special care
@@ -338,7 +364,7 @@ FLYTRAP_API int __stdcall FlyTrapInitClient(wchar_t *dumpPath, wchar_t *reportUr
 	clientContext->enabled = 0;
 
 	lctx = clientContext;
-	return(1);
+	return(FLYTRAP_ERROR_SUCCESS);
 }
 
 #include "client/windows/crash_generation/crash_generation_server.h"
@@ -649,7 +675,7 @@ void FlyTrapOutOfProcessDumpCallback(void *dump_context, ClientInfo *client_info
 			// this will be free'd by the thread we start
 			params = (LPFLYTRAPPARAM)malloc(sizeof(FLYTRAPPARAM) * pCount);
 			if(params == NULL) {
-				/// @TODO Handle this error in some way to let someone know it happened
+				/// @HACK Handle this error in some way to let someone know it happened
 				return;
 			}
 			for(unsigned int i = 0; i < pCount; i++) {
