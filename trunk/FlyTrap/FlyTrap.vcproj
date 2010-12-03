@@ -284,7 +284,18 @@
 					Name="VCCustomBuildTool"
 					Description="Generating version information ..."
 					CommandLine="$(InputPath)&#x0D;&#x0A;"
-					AdditionalDependencies="FlyTrap.h FlyTrap.cpp CrashAlert_Window.cpp FlyTrap.rc"
+					AdditionalDependencies="FlyTrap.h;FlyTrap.cpp;CrashAlert_Window.cpp;FlyTrap.rc;resource.h"
+					Outputs="FlyTrapVersion.h"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Release|Win32"
+				>
+				<Tool
+					Name="VCCustomBuildTool"
+					Description="Generating version information ..."
+					CommandLine="$(InputPath)"
+					AdditionalDependencies="FlyTrap.h;FlyTrap.cpp;CrashAlert_Window.cpp;FlyTrap.rc;resource.h"
 					Outputs="FlyTrapVersion.h"
 				/>
 			</FileConfiguration>

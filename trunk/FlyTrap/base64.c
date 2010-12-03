@@ -1,4 +1,4 @@
-/*
+/*! @internal
 The following code for Base64 encoding and decoding operations is licensed with the following license.
 This license applies ONLY to the Base64 code taken from b64.c originally, it does not apply to any other parts of this
 file.
@@ -26,6 +26,7 @@ OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR
 OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
 
 /*
 ** Translation Table as described in RFC1113
