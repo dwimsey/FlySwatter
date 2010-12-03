@@ -1,0 +1,24 @@
+/*! mainpage FlyTrap Error Reporting Library Documentation
+ * 
+ * FlyTrap is an easy to use application error reporting library designed
+ * to be flexible yet very simple to use from any application.
+ *
+ * The FlyTrap library is provided as a self contained DLL which provides
+ * all the required resources needed to report unhandled exceptions (crashes)
+ * and other debug information about any application back to a web server. The
+ * library automatically displays most types of information to the user before
+ * sending to ensure the user is aware of the data they are sending for
+ * privacy.
+ *
+ * C, C++ and ObjectiveC applications can enable error reporting by linking
+ * to the FlyTrap dynamic library and making 3 simple API calls.  The GUI can
+ * be configured to display customized text and logos using API calls.
+ *
+ * When an error report is triggered due to an unhandled exception or
+ * software request, a dump of the application memory is made, and custom
+ * information provided 
+ * and other debug
+ *
+ * The FlyTrap API Reference is contained within FlyTrap.h.
+ *
+ */
