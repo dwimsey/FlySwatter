@@ -5,11 +5,10 @@
  *
  * @brief FlyTrap glue implementation
  * @author David Wimsey
- * @version $Revisiona$
- * @date 2003-2010
+ * $Revision$
+ * $Date$
  *
- *
- * LICENSE
+ * @section LICENSE
  *
  * Copyright (c) 2003-2010, David Wimsey
  * All rights reserved.
@@ -41,7 +40,7 @@
 //
 
 #include "stdafx.h"
-
+#include "flytrapversion.h"
 // these are in librtslocalize, which we don't want to include just yet
 #ifdef WIN32
 #define tstrcpy wcscpy
@@ -996,7 +995,8 @@ map<wstring, wstring> *CreateParamMap(const LPFLYTRAPPARAM params, const int par
 	if(paramsStr == NULL) {
 		return(NULL);
 	}
-	(*paramsStr)[L"FlyTrapVersion"] = _T(FLYTRAP_VERSION_STRING);
+	(*paramsStr)[L"FlyTrapVersion"] = _T(FLYTRAP_STRPRODUCTVERSION);
+	(*paramsStr)[L"FlyTrapBuildFlags"] = _T(FLYTRAP_STRSPECIALBUILD);
 	(*paramsStr)[L"FlyTrapCrashId"] = dumpId;
 	(*paramsStr)[L"FlyTrapReportURL"] = reportUrl;
 

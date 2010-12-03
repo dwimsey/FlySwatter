@@ -1,12 +1,13 @@
 /*! @file FlyTrap.h
+ * @brief FlyTrap API Reference
+ *
+ * @author David Wimsey
+ * $Revision$
+ * $Date$
+ *
  * Primary FlyTrap definitions.
  *
- * @brief FlyTrap API Reference
- * @author David Wimsey
- * @version $Revision$
- * @date $Date$
- *
- * @section LICENSE
+ * @section License
  * Copyright (c) 2003-2010, David Wimsey
  * All rights reserved.
  *
