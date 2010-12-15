@@ -152,6 +152,9 @@ if os.path.exists(rcs_workdir):
 	svn_paths.append("C:\\Program Files\\Utilities\\svnversion.exe")
 	svn_paths.append("C:\\Program Files\\Subversion\\svnversion.exe")
 	svn_paths.append("C:\\Program Files\\Subversion\\bin\\svnversion.exe")
+	svn_paths.append("C:\\Program Files (x86)\\Utilities\\svnversion.exe")
+	svn_paths.append("C:\\Program Files (x86)\\Subversion\\svnversion.exe")
+	svn_paths.append("C:\\Program Files (x86)\\Subversion\\bin\\svnversion.exe")
 
 	svn_binary = ""
 	
@@ -263,6 +266,13 @@ else:
 	cvs_paths.append("C:\\Program Files\\GNU\\CVS\\cvs.exe")
 	cvs_paths.append("C:\\Program Files\\CVSNT\\cvs.exe")
 	cvs_paths.append("C:\\Program Files\\CVS\\cvs.exe")
+
+	cvs_paths.append("C:\\Program Files (x86)\\GNU\\WinCvs 1.3\\CVSNT\\cvs.exe")
+	cvs_paths.append("C:\\Program Files (x86)\\GNU\\WinCvs 1.3\\CVS\\cvs.exe")
+	cvs_paths.append("C:\\Program Files (x86)\\GNU\\CVSNT\\cvs.exe")
+	cvs_paths.append("C:\\Program Files (x86)\\GNU\\CVS\\cvs.exe")
+	cvs_paths.append("C:\\Program Files (x86)\\CVSNT\\cvs.exe")
+	cvs_paths.append("C:\\Program Files (x86)\\CVS\\cvs.exe")
 	
 	cvs_binary = ""
 	
