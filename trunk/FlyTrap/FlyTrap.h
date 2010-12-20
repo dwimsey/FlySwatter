@@ -272,7 +272,7 @@ FLYTRAP_API void __stdcall FlyTrapTriggerReport();
 #define FLYTRAP_PARAM_DEBUGREPORT_SENDBUTTON			L"DebugReport_SendButton"
 #define FLYTRAP_PARAM_DEBUGREPORT_CANCELBUTTON			L"DebugReport_CancelButton"
 
-#define FLYTRAP_PARAM_CHECKPOINT_SETTINGS				L"FlyTrap	CheckpointSettings"
+#define FLYTRAP_PARAM_CHECKPOINT_SETTINGS				L"CheckpointSettings"
 #define FLYTRAP_PARAM_ATTACHFILES_PARAM					L"AttachedFile"
 #define FLYTRAP_PARAM_ATTACHREGKEY_PARAM				L"AttachedRegKey"
 
