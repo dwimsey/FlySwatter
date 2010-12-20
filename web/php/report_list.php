@@ -6,11 +6,7 @@ $dumpIds = getReportList();
 
 $reportXml = '<ErrorReports>';
 foreach($dumpIds as $rInfo) {
-	$reportXml .= '<ReportInfo>';
-	$reportXml .= '<DumpId>' . $rInfo->DumpId . '</DumpId>';
-	$reportXml .= '<SubmissionTimestamp>' . $rInfo->SubmissionTimestamp . '</SubmissionTimestamp>';
-	$reportXml .= '<DateSubmitted>' . $rInfo->DateSubmitted . '</DateSubmitted>';
-	$reportXml .= '</ReportInfo>';
+	$reportXml .= $rInfo->GetXML();
 }
 $reportXml .= '</ErrorReports>';
 

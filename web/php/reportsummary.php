@@ -1,6 +1,6 @@
 <?
 require_once('config.defaults.php');
-require_once('classes/stackwalk.php');
+require_once('classes/minidump.php');
 
 $dumpid = $_GET['dumpid'];
 $fn = $report_dir . '/' . $dumpid . '.xml';
@@ -8,7 +8,7 @@ $fn = $report_dir . '/' . $dumpid . '.xml';
 if($_GET['afile'] != null) {
 	$afile = $_GET['afile'];
 	$xml = simplexml_load_file($fn);
-	$result = $xml->xpath("/UploadedDebugReport/Parameters/Report_AttachFiles_${afile}");
+	$result = $xml->xpath("/UploadedDebugReport/Parameters/AttachedFile_${afile}");
 	if(count($result) == 0) {
 		// look for old style registry attachment names
 		$result = $xml->xpath("/UploadedDebugReport/Parameters/FlyTrap_AttachFiles_${afile}");
@@ -42,7 +42,7 @@ if($_GET['afile'] != null) {
 	$rfile = $_GET['rfile'];
 
 	$xml = simplexml_load_file($fn);
-	$result = $xml->xpath("/UploadedDebugReport/Parameters/Report_AttachRegKeys_${rfile}");
+	$result = $xml->xpath("/UploadedDebugReport/Parameters/AttachedRegKey_${rfile}");
 	if(count($result) == 0) {
 		// look for old style registry attachment names
 		$result = $xml->xpath("/UploadedDebugReport/Parameters/FlyTrap_AttachRegKeys_${rfile}");
@@ -58,9 +58,12 @@ if($_GET['afile'] != null) {
 		$binData = $fieldData;
 		echo "Registry key was not included, Error: $tfsize: $fdata";
 	} else {
-		header("Content-type: text/plain; charset=utf-8;");//application/octet-stream");
-		// header("Content-Disposition: attachment; filename=\"". basename($fname) . "\"");
-//		header("Content-Disposition: filename=\"FlyTrapRegistryDump_${rfile}.reg\"");
+		if($_GET['mode'] == 'view') {
+			header("Content-type: text/plain; charset=utf-8;");//application/octet-stream");
+		} else {
+			header("Content-type: application/octet-stream");
+			header("Content-Disposition: attachment; filename=\"". $dumpid . "_reg_" . $rfile .".reg\"");
+		}
 		header("Content-length: " . $tfsize);
 		header("Cache-control: private"); //use this to open files directly
 		echo trim($fdata);
@@ -69,7 +72,7 @@ if($_GET['afile'] != null) {
 	// pass the file through
 	header("Content-type: text/xml; charset=utf-8;");//application/octet-stream");
 	// header("Content-Disposition: attachment; filename=\"". basename($fname) . "\"");
-	// header("Content-Disposition: filename=\"FlyTrapRegistryDump_${rfile}.reg\"");
+	header("Content-Disposition: filename=\"" . $dumpid . ".xml\"");
 	header("Cache-control: private"); //use this to open files directly
 	$fdata = file($fn);
 	$len = count($fdata);

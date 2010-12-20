@@ -35,9 +35,8 @@
 			<table>
 				<thead>
 					<tr>
-						<td align="left">Report Parameters - <xsl:value-of select="/UploadedDebugReport/Parameters/AppName"/> v<xsl:value-of select="/UploadedDebugReport/Parameters/AppVersion"/> ( <a style="color:white;font-size:10"><xsl:attribute name="href">reportsummary.php?dumpid=<xsl:value-of select="/UploadedDebugReport/Parameters/FlyTrapCrashId"/>&amp;dfile=0&amp;type=xml</xsl:attribute>Download</a> )</td>
-						<td style="width=100%"></td>
-						<td align="right">Crash Id: <xsl:value-of select="/UploadedDebugReport/Parameters/FlyTrapCrashId"/></td>
+						<td colspan="4" width="100%" align="left">Report Parameters - <xsl:value-of select="/UploadedDebugReport/Parameters/AppName"/> v<xsl:value-of select="/UploadedDebugReport/Parameters/AppVersion"/> ( <a style="color:white;font-size:10"><xsl:attribute name="href">reportsummary.php?dumpid=<xsl:value-of select="/UploadedDebugReport/Parameters/FlyTrapCrashId"/>&amp;dfile=0&amp;type=xml</xsl:attribute>Download</a> )</td>
+						<td colspan="2" align="right"><nobr>Crash Id: <xsl:value-of select="/UploadedDebugReport/Parameters/FlyTrapCrashId"/></nobr></td>
 					</tr>
 				</thead>
 				<tbody>
@@ -45,8 +44,22 @@
 					<xsl:sort select="name(.)"/>
 					<xsl:choose>
 						<xsl:when test="name(.) = &quot;AppName&quot;">
+						<tr>
+							<td width="20"><nobr>Application Name:</nobr></td><td align="left" colspan="5"><xsl:value-of select="."/></td>
+						</tr>
+						</xsl:when>
+						<xsl:when test="name(.) = &quot;AppGuid&quot;">
+						</xsl:when>
+						<xsl:when test="name(.) = &quot;ProductName&quot;">
+						</xsl:when>
+						<xsl:when test="name(.) = &quot;ProductGuid&quot;">
+						</xsl:when>
+						<xsl:when test="name(.) = &quot;SubmissionTimestamp&quot;">
 						</xsl:when>
 						<xsl:when test="name(.) = &quot;AppVersion&quot;">
+						<tr>
+							<td>Version:</td><td colspan="5"><xsl:value-of select="."/></td>
+						</tr>
 						</xsl:when>
 						<xsl:when test="name(.) = &quot;AppBuildId&quot;">
 						</xsl:when>
@@ -111,13 +124,13 @@
 						<xsl:when test="name(.) = &quot;DebugReport_CancelButton&quot;">
 						</xsl:when>
 
-						<xsl:when test="name(.) = &quot;Report_AttachFiles&quot;">
+						<xsl:when test="name(.) = &quot;AttachedFiles&quot;">
 						</xsl:when>
-						<xsl:when test="starts-with(name(.), &quot;Report_AttachFiles_&quot;)">
+						<xsl:when test="starts-with(name(.), &quot;AttachedFile_&quot;)">
 						</xsl:when>
-						<xsl:when test="name(.) = &quot;Report_AttachRegKeys&quot;">
+						<xsl:when test="name(.) = &quot;AttachedRegKeys&quot;">
 						</xsl:when>
-						<xsl:when test="starts-with(name(.), &quot;Report_AttachRegKeys_&quot;)">
+						<xsl:when test="starts-with(name(.), &quot;AttachedRegKey_&quot;)">
 						</xsl:when>
 
 						<!-- Remove these in the future, they are only for early release compatibility -->
@@ -132,12 +145,12 @@
 
 						<xsl:when test="name(.) = &quot;ptime&quot;">
 					<tr>
-						<td>Application Uptime (milliseconds since start)</td><td></td><td><xsl:value-of select="."/></td>
+						<td>Application Uptime (milliseconds since start)</td><td colspan="5"><xsl:value-of select="."/></td>
 					</tr>
 						</xsl:when>
 						<xsl:otherwise>
 					<tr>
-						<td><xsl:value-of select="name(.)"/></td><td></td><td><xsl:value-of select="."/></td>
+						<td><xsl:value-of select="name(.)"/></td><td colspan="5"><xsl:value-of select="."/></td>
 					</tr>
 						</xsl:otherwise>
 					</xsl:choose>
@@ -160,7 +173,7 @@
 					<td>Filename</td>
 					<td>Size</td>
 					<td>Mime Type</td>
-					<td>Stack Trace</td>
+					<td>Dump Summary</td>
 				</tr>
 				</thead>
 				<tbody>
@@ -174,16 +187,16 @@
 						</td>
 						<td valign="top"><xsl:value-of select="Size"/></td>
 						<td valign="top"><xsl:value-of select="Type"/></td>
-						<td valign="top">
+						<td valign="top" xml:space="preserve">
 							<!-- <div style="color:Blue">
 								<xsl:attribute name="onclick">javascript:ShowStackWalk(this, '<xsl:value-of select="/UploadedDebugReport/Parameters/FlyTrapCrashId"/>', 0);</xsl:attribute>
 								Show Stack Trace
 							</div> -->
-							(	<a><xsl:attribute name="href">minidump.php?dumpid=<xsl:value-of select="/UploadedDebugReport/Parameters/FlyTrapCrashId"/>&amp;dfile=0&amp;type=text</xsl:attribute>Text</a> 
-								<a><xsl:attribute name="href">minidump.php?dumpid=<xsl:value-of select="/UploadedDebugReport/Parameters/FlyTrapCrashId"/>&amp;dfile=0&amp;type=xml</xsl:attribute> XML</a> 
-								<a><xsl:attribute name="href">minidump.php?dumpid=<xsl:value-of select="/UploadedDebugReport/Parameters/FlyTrapCrashId"/>&amp;dfile=0&amp;type=raw</xsl:attribute>Raw</a> 
-								<a><xsl:attribute name="href">minidump.php?dumpid=<xsl:value-of select="/UploadedDebugReport/Parameters/FlyTrapCrashId"/>&amp;dfile=0&amp;type=json</xsl:attribute>JSON</a> 
-								<a><xsl:attribute name="href">minidump.php?dumpid=<xsl:value-of select="/UploadedDebugReport/Parameters/FlyTrapCrashId"/>&amp;dfile=0&amp;type=html</xsl:attribute>HTML</a> )
+							<a><xsl:attribute name="href">minidump.php?dumpid=<xsl:value-of select="/UploadedDebugReport/Parameters/FlyTrapCrashId"/>&amp;dfile=0&amp;type=html</xsl:attribute>HTML</a>
+							<a><xsl:attribute name="href">minidump.php?dumpid=<xsl:value-of select="/UploadedDebugReport/Parameters/FlyTrapCrashId"/>&amp;dfile=0&amp;type=text</xsl:attribute>Text</a> 
+							<a><xsl:attribute name="href">minidump.php?dumpid=<xsl:value-of select="/UploadedDebugReport/Parameters/FlyTrapCrashId"/>&amp;dfile=0&amp;type=xml</xsl:attribute> XML</a> 
+							<a><xsl:attribute name="href">minidump.php?dumpid=<xsl:value-of select="/UploadedDebugReport/Parameters/FlyTrapCrashId"/>&amp;dfile=0&amp;type=raw</xsl:attribute>Raw</a> 
+							<a><xsl:attribute name="href">minidump.php?dumpid=<xsl:value-of select="/UploadedDebugReport/Parameters/FlyTrapCrashId"/>&amp;dfile=0&amp;type=json</xsl:attribute>JSON</a>
 						</td>
 			    	</tr>
         		</xsl:for-each>
@@ -208,9 +221,9 @@
 				<tbody>
 				<xsl:for-each select="UploadedDebugReport/Parameters/*">
 					<tr>
-						<xsl:if test="starts-with(name(.), &quot;Report_AttachFiles_&quot;)">
+						<xsl:if test="starts-with(name(.), &quot;AttachedFile_&quot;)">
 							<td>
-								<xsl:value-of select="substring-after(name(.), &quot;Report_AttachFiles_&quot;)"/>
+								<xsl:value-of select="substring-after(name(.), &quot;AttachedFile_&quot;)"/>
 							</td>
 							<td>
 								<xsl:choose>
@@ -222,7 +235,7 @@
 									</xsl:when>
 									<xsl:otherwise>
 								<a>
-									<xsl:attribute name="href">showreport.php?dumpid=<xsl:value-of select="/UploadedDebugReport/Parameters/FlyTrapCrashId"/>&amp;afile=<xsl:value-of select="substring-after(name(.), &quot;Report_AttachFiles_&quot;)"/></xsl:attribute>
+									<xsl:attribute name="href">reportsummary.php?dumpid=<xsl:value-of select="/UploadedDebugReport/Parameters/FlyTrapCrashId"/>&amp;afile=<xsl:value-of select="substring-after(name(.), &quot;AttachedFile_&quot;)"/></xsl:attribute>
 								<xsl:value-of select="substring-before(., &quot;;&quot;)"/>
 								</a>
 									</xsl:otherwise>
@@ -231,10 +244,10 @@
 							<td>
 								<xsl:choose>
 									<xsl:when test="substring-before(substring-after(., &quot;;&quot;), &quot;;&quot;) = &quot;-2&quot;">
-										<nobr><font color="#FF3333">File Not Found</font></nobr>
+										<nobr><span class="itemnotfound">File Not Found</span></nobr>
 									</xsl:when>
 									<xsl:when test="substring-before(substring-after(., &quot;;&quot;), &quot;;&quot;) = &quot;0&quot;">
-										<nobr><font color="#3333FF">0</font></nobr>
+										<nobr><font class	="itemempty">0</font></nobr>
 									</xsl:when>
 									<xsl:otherwise>
 										<nobr><xsl:value-of select="substring-before(substring-after(., &quot;;&quot;), &quot;;&quot;)"/></nobr>
@@ -257,7 +270,7 @@
 									</xsl:when>
 									<xsl:otherwise>
 								<a>
-									<xsl:attribute name="href">showreport.php?dumpid=<xsl:value-of select="/UploadedDebugReport/Parameters/FlyTrapCrashId"/>&amp;afile=<xsl:value-of select="substring-after(name(.), &quot;FlyTrap_AttachFiles_&quot;)"/></xsl:attribute>
+									<xsl:attribute name="href">reportsummary.php?dumpid=<xsl:value-of select="/UploadedDebugReport/Parameters/FlyTrapCrashId"/>&amp;afile=<xsl:value-of select="substring-after(name(.), &quot;FlyTrap_AttachFile_&quot;)"/></xsl:attribute>
 								<xsl:value-of select="substring-before(., &quot;;&quot;)"/>
 								</a>
 									</xsl:otherwise>
@@ -266,10 +279,10 @@
 							<td>
 								<xsl:choose>
 									<xsl:when test="substring-before(substring-after(., &quot;;&quot;), &quot;;&quot;) = &quot;-2&quot;">
-										<nobr><font color="#FF3333">File Not Found</font></nobr>
+										<nobr><span class="itemnotfound">File Not Found</span></nobr>
 									</xsl:when>
 									<xsl:when test="substring-before(substring-after(., &quot;;&quot;), &quot;;&quot;) = &quot;0&quot;">
-										<nobr><font color="#3333FF">0</font></nobr>
+										<nobr><span class="itemempty">0</span></nobr>
 									</xsl:when>
 									<xsl:otherwise>
 										<nobr><xsl:value-of select="substring-before(substring-after(., &quot;;&quot;), &quot;;&quot;)"/></nobr>
@@ -289,39 +302,35 @@
 			<table>
 				<thead>
 				<tr>
-					<td>Attached Registry Dumps</td>
+					<td colspan="2">Attached Registry Keys</td>
 				</tr>
-				<tr>
+				<tr xml:space="preserve">
 					<td width="20">#</td>
-					<td >Base Path</td>
-					<td> </td>
+					<td>Base Path</td>
+					<td></td>
 				</tr>
 				</thead>
 				<tbody>
 				<xsl:for-each select="UploadedDebugReport/Parameters/*">
 					<tr>
-						<xsl:if test="starts-with(name(.), &quot;Report_AttachRegKeys_&quot;)">
+						<xsl:if test="starts-with(name(.), &quot;AttachedRegKey_&quot;)">
 							<td>
-								<xsl:value-of select="substring-after(name(.), &quot;Report_AttachRegKeys_&quot;)"/>
+								<xsl:value-of select="substring-after(name(.), &quot;AttachedRegKey_&quot;)"/>
 							</td>
+							<td><xsl:value-of select="substring-before(., &quot;;&quot;)"/></td>
 							<td>
 								<xsl:choose>
-									<xsl:when test="substring-before(substring-after(., &quot;;&quot;), &quot;;&quot;) = &quot;-2&quot;">
-										<xsl:value-of select="substring-before(., &quot;;&quot;)"/>
-									</xsl:when>
-									<xsl:when test="substring-before(substring-after(., &quot;;&quot;), &quot;;&quot;) = &quot;0&quot;">
-										<xsl:value-of select="substring-before(., &quot;;&quot;)"/>
+									<xsl:when test="contains(substring-after(., &quot;;&quot;), &quot;!!Error: Could not open key: 2&quot;)">
+										<span class="itemnotfound">
+											Registry key not found.
+										</span>
 									</xsl:when>
 									<xsl:otherwise>
-								<a>
-									<xsl:attribute name="href">showreport.php?dumpid=<xsl:value-of select="/UploadedDebugReport/Parameters/FlyTrapCrashId"/>&amp;rfile=<xsl:value-of select="substring-after(name(.), &quot;Report_AttachRegKeys_&quot;)"/></xsl:attribute>
-								<xsl:value-of select="substring-before(., &quot;;&quot;)"/>
-								</a>
+									<span xml:space="preserve"><a><xsl:attribute name="href">reportsummary.php?dumpid=<xsl:value-of select="/UploadedDebugReport/Parameters/FlyTrapCrashId"/>&amp;rfile=<xsl:value-of select="substring-after(name(.), &quot;FlyTrap_AttachRegKeys_&quot;)"/>&amp;mode=view</xsl:attribute>View</a> - <a><xsl:attribute name="href">reportsummary.php?dumpid=<xsl:value-of select="/UploadedDebugReport/Parameters/FlyTrapCrashId"/>&amp;rfile=<xsl:value-of select="substring-after(name(.), &quot;AttachedRegKey_&quot;)"/></xsl:attribute>Download</a></span>
 									</xsl:otherwise>
 								</xsl:choose>
 							</td>
-							<td>								<xsl:value-of select="substring-before(., &quot;;&quot;)"/>
-</td>
+
 						</xsl:if>
 						<!-- This handles old style registry attachment names -->
 						<xsl:if test="starts-with(name(.), &quot;FlyTrap_AttachRegKeys_&quot;)">
@@ -331,17 +340,13 @@
 							<td><xsl:value-of select="substring-before(., &quot;;&quot;)"/></td>
 							<td>
 								<xsl:choose>
-									<xsl:when test="substring-before(substring-after(., &quot;;&quot;), &quot;;&quot;) = &quot;-2&quot;">
-										<xsl:value-of select="substring-before(., &quot;;&quot;)"/>
-									</xsl:when>
-									<xsl:when test="substring-before(substring-after(., &quot;;&quot;), &quot;;&quot;) = &quot;0&quot;">
-										<xsl:value-of select="substring-before(., &quot;;&quot;)"/>
+									<xsl:when test="contains(substring-after(., &quot;;&quot;), &quot;!!Error: Could not open key: 2&quot;)">
+										<span class="itemnotfound">
+											Registry key not found.
+										</span>
 									</xsl:when>
 									<xsl:otherwise>
-								<a>
-									<xsl:attribute name="href">showreport.php?dumpid=<xsl:value-of select="/UploadedDebugReport/Parameters/FlyTrapCrashId"/>&amp;rfile=<xsl:value-of select="substring-after(name(.), &quot;FlyTrap_AttachRegKeys_&quot;)"/></xsl:attribute>
-								view
-								</a>
+									<span xml:space="preserve"><a><xsl:attribute name="href">reportsummary.php?dumpid=<xsl:value-of select="/UploadedDebugReport/Parameters/FlyTrapCrashId"/>&amp;rfile=<xsl:value-of select="substring-after(name(.), &quot;FlyTrap_AttachRegKeys_&quot;)"/>&amp;mode=view</xsl:attribute>View</a> - <a><xsl:attribute name="href">reportsummary.php?dumpid=<xsl:value-of select="/UploadedDebugReport/Parameters/FlyTrapCrashId"/>&amp;rfile=<xsl:value-of select="substring-after(name(.), &quot;FlyTrap_AttachRegKeys_&quot;)"/></xsl:attribute>Download</a></span>
 									</xsl:otherwise>
 								</xsl:choose>
 							</td>
