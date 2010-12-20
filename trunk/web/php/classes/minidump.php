@@ -51,6 +51,8 @@ class MinidumpInfo {
 		}
 	}
 
+
+
 	function ParseMinidumpStackWalk($lines) {
 		$lineCount = count($lines);
 		$gotCPULine = false;
@@ -157,6 +159,12 @@ class MinidumpInfo {
 		return(true);
 	}
 	
+
+	function ReadMinidumpData($dumpid, $dfile, $binData) {
+		$rawDump = getMinidumpStackwalkFile($dumpid, $dfile, $binData, false);
+		return($this->ParseMinidumpStackWalk(explode("\n", $rawDump)));
+	}
+		
 	function ReadMinidumpFile($minidump_filename) {
 		global $stackwalker_path;
 		global $cache_path;
@@ -164,38 +172,6 @@ class MinidumpInfo {
 		$cmdpath = $stackwalker_path . " -m " . $minidump_filename . " /Users/dwimsey/Sites/flyswatter/symbols";
 		exec(escapeshellcmd($cmdpath), &$output);
 		return($this->ParseMinidumpStackWalk($output));
-	}
-	
-	function MD() {
-		$cache_filename = $dumpid . '_md' . $dfile . '.xml';
-		$cache_file = $cache_dir . '/' . $cache_filename;
-		$outStr = '';
-		if(file_exists($cache_file)) {
-			$fp = fopen($cache_file, 'r');
-			if($fp) {
-				$outStr = fread($fp, filesize($cache_file));
-				fclose($fp);
-			}
-		}
-
-		// if we haven't got an xml string by here, reprocess it and recache it		
-		if($outStr == '') {
-			$tmpfname = tempnam("/tmp", "dmp");
-	
-			$handle = fopen($tmpfname, "w");
-			fwrite($handle, $binData);
-			fclose($handle);
-	
-			$stacktrace = new MinidumpInfo();
-			$stacktrace->ReadMinidumpFile($tmpfname);
-			unlink($tmpfname);
-	
-			$outStr = $stacktrace->GetXML();
-			$fp =fopen($cache_file, 'w+');
-			fwrite($fp, $outStr);
-			fclose($fp);
-		}
-		
 	}
 
 	function GetXML() {
@@ -242,7 +218,7 @@ class MinidumpInfo {
 		$this->OSVersion = $result[0];
 
 		$result = $xml->xpath("/MinidumpSummary/CPU/Architecture");
-		$this->OSArchitecture = $result[0];
+		$this->CPUArchitecture = $result[0];
 		$result = $xml->xpath("/MinidumpSummary/CPU/Model");
 		$this->CPUModel = $result[0];
 		$result = $xml->xpath("/MinidumpSummary/CPU/Count");
@@ -351,4 +327,88 @@ class MinidumpInfo {
 	}
 }
 
+
+function getMinidumpStackwalkFile($dumpid, $dfile, $binData, $wantsText) {
+	global $cache_dir;
+	global $cache_minidump_text;
+	global $cache_minidump_raw;
+	global $cache_minidump_xml;
+	global $stackwalker_path;
+
+	$should_cache = false;
+	if($wantsText) {
+		if($cache_minidump_text == 1) {
+			$should_cache = true;
+		}
+	} else {
+		if($cache_minidump_raw == 1) {
+			$should_cache = true;
+		}
+	}
+
+	$outStr = '';
+	$minidump = NULL;
+	$cache_file = NULL;
+	if($should_cache) {
+		$cache_filename = $dumpid . '_' . $dfile;
+		if($wantsText) {
+			$cache_filename .= '.txt';
+		} else {
+			$cache_filename .= '.raw';
+		}
+		$cache_file = $cache_dir . '/md/' . $cache_filename;
+		if(file_exists($cache_file)) {
+			$fp = fopen($cache_file, 'r');
+			if($fp) {
+				$outStr = fread($fp, filesize($cache_file));
+				fclose($fp);
+				return($outStr);
+			}
+		}
+	}
+
+	// if we haven't got an xml string by here, reprocess it and recache it		
+
+	$tmpfname = tempnam("/tmp", "dmp");
+
+	$handle = fopen($tmpfname, "w");
+	fwrite($handle, $binData);
+	fclose($handle);
+
+	if($wantsText) {
+		$cmdpath = "${stackwalker_path} ${tmpfname} ${symbols_dir}";
+	} else {
+		$cmdpath = "${stackwalker_path} -m ${tmpfname} ${symbols_dir}";
+	}
+	exec(escapeshellcmd($cmdpath), &$output);
+	header('Content-Type: text/plain');
+	$iMax = count($output);
+	if($iMax < 1) {
+		// get out of here, nothing to send
+		return('');
+	}
+
+	$outStr = '';
+	if($should_cache) {
+		$fp = fopen($cache_file, 'w');
+		if($fp != false) {
+			for($i = 0; $i < $iMax; $i++) {
+				$outStr .= $output[$i] . "\n";
+				fwrite($fp, $output[$i] . "\n");
+			}
+			fclose($fp);
+		} else {
+			for($i = 0; $i < $iMax; $i++) {
+				$outStr .= $output[$i] . "\n";
+			}
+		}
+	} else {
+		for($i = 0; $i < $iMax; $i++) {
+			$outStr .= $output[$i] . "\n";
+		}
+	}
+	unlink($tmpfname);
+
+	return($outStr);
+}
 ?>

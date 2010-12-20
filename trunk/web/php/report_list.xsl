@@ -96,8 +96,16 @@
 							</td>
 							<td>
 								<xsl:choose>
-									<xsl:when test="Exception = &quot;No crash&quot;">
-										Debug Report
+									<xsl:when test="Exception = &quot;&quot;">
+										<xsl:choose>
+											<xsl:when test="Assertion = &quot;&quot;">
+												Debug Report
+											</xsl:when>
+											<xsl:otherwise>
+												<xsl:value-of select="Exception"/>
+												@ <xsl:value-of select="CrashData"/>
+											</xsl:otherwise>
+										</xsl:choose>
 									</xsl:when>
 									<xsl:otherwise>
 										<xsl:value-of select="Exception"/>

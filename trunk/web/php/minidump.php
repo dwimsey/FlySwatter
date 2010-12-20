@@ -2,6 +2,10 @@
 require_once('config.defaults.php');
 require_once('classes/minidump.php');
 
+global $cache_minidump_text;
+global $cache_minidump_raw;
+global $cache_minidump_xml;
+
 $dumpid = $_GET['dumpid'];
 $fn = $report_dir . '/' . $dumpid . '.xml';
 
@@ -38,37 +42,37 @@ if($_GET['dfile'] != null) {
 		header('Content-Type: text/plain');
 		echo json_encode($stacktrace);
 		exit;
-	} else if(($_GET['type'] == 'xml') || ($_GET['type'] == 'html')) {
-		$cache_filename = $dumpid . '_md' . $dfile . '.xml';
-		$cache_file = $cache_dir . '/' . $cache_filename;
+	} else if(($_GET['type'] == 'xml') || ($_GET['type'] == 'html') ||  ($_GET['type'] == 'json')) {
+		$cache_filename = $dumpid . '_' . $dfile . '.xml';
+		$cache_file = $cache_dir . '/md/' . $cache_filename;
 		$outStr = '';
-		if(file_exists($cache_file)) {
-			$fp = fopen($cache_file, 'r');
-			if($fp) {
-				$outStr = fread($fp, filesize($cache_file));
-				fclose($fp);
-				$stacktrace = new MinidumpInfo();
-				$stacktrace->FromXML($outStr);
-				$outStr = $stacktrace->GetXML();
+		$minidump = NULL;
+		if($cache_minidump_xml == 1) {
+			if(file_exists($cache_file)) {
+				$fp = fopen($cache_file, 'r');
+				if($fp) {
+					$outStr = fread($fp, filesize($cache_file));
+					fclose($fp);
+					$minidump = new MinidumpInfo();
+					if(!$minidump->FromXML($outStr)) {
+						$minidump = NULL;
+					}
+				}
 			}
 		}
 
 		// if we haven't got an xml string by here, reprocess it and recache it		
-		if($outStr == '') {
-			$tmpfname = tempnam("/tmp", "dmp");
-	
-			$handle = fopen($tmpfname, "w");
-			fwrite($handle, $binData);
-			fclose($handle);
-	
-			$stacktrace = new MinidumpInfo();
-			$stacktrace->ReadMinidumpFile($tmpfname);
-			unlink($tmpfname);
-	
-			$outStr = $stacktrace->GetXML();
-			$fp =fopen($cache_file, 'w+');
-			fwrite($fp, $outStr);
-			fclose($fp);
+		if($outStr == '') {	
+			$minidump = new MinidumpInfo();
+			$minidump->ReadMinidumpData($dumpid, 0, $binData);	
+			$outStr = $minidump->GetXML();
+			if($cache_minidump_xml == 1) {
+				$fp = fopen($cache_file, 'w');
+				if($fp != false) {
+					fwrite($fp, $outStr);
+					fclose($fp);
+				}
+			}
 		}
 
 		if($_GET['type'] == 'xml') {
@@ -76,6 +80,10 @@ if($_GET['dfile'] != null) {
 			header("Content-type: text/xml; charset=utf-8;");
 			header("Cache-control: private");
 			print("<?xml version=\"1.0\"?>\n" . str_replace("&nbsp;", "&amp;nbsp;", $outStr));
+		} else if($_GET['type'] == 'json') {
+			header('Content-Type: text/plain');
+			echo json_encode($minidump);
+			exit;
 		} else {
 			if($use_browser_xslt) {
 				header("Content-Disposition: filename=\"" . urlencode($cache_filename) . "\"");
@@ -101,29 +109,11 @@ if($_GET['dfile'] != null) {
 		
 		exit;
 	} else	if($_GET['type'] == 'text') {
-		$tmpfname = tempnam("/tmp", "dmp");
-
-		$handle = fopen($tmpfname, "w");
-		fwrite($handle, $binData);
-		fclose($handle);
-
-		$cmdpath = $stackwalker_path . " " . $tmpfname . " /Users/dwimsey/Sites/flyswatter/symbols";
-		header('Content-Type: text/plain');
-		passthru(escapeshellcmd($cmdpath));
-
-		unlink($tmpfname);
+		echo getMinidumpStackwalkFile($dumpid, $dfile, $binData, true);
+		exit;
 	} else 	if($_GET['type'] == 'raw') {
-		$tmpfname = tempnam("/tmp", "dmp");
-
-		$handle = fopen($tmpfname, "w");
-		fwrite($handle, $binData);
-		fclose($handle);
-
-		$cmdpath = $stackwalker_path . " -m " . $tmpfname . " /Users/dwimsey/Sites/flyswatter/symbols"; 
-		header('Content-Type: text/plain');
-		passthru(escapeshellcmd($cmdpath));
-
-		unlink($tmpfname);
+		echo getMinidumpStackwalkFile($dumpid, $dfile, $binData, false);
+		exit;
 	} else {
 		switch ($ext) {
 			case "1":
