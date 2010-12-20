@@ -50,7 +50,6 @@ if($_GET['dfile'] != null) {
 			}
 		}
 
-		$outStr = '';
 		// if we haven't got an xml string by here, reprocess it and recache it		
 		if($outStr == '') {
 			$tmpfname = tempnam("/tmp", "dmp");
