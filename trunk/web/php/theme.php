@@ -37,7 +37,11 @@ if($_GET['type'] == 'css') {
 	color:				black;
 	padding:			4px;
 }
-		
+
+.itemnotfound {
+	color:				red;
+}
+
 <?
 }
 ?>

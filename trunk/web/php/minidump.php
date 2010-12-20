@@ -1,6 +1,6 @@
 <?
 require_once('config.defaults.php');
-require_once('classes/stackwalk.php');
+require_once('classes/minidump.php');
 
 $dumpid = $_GET['dumpid'];
 $fn = $report_dir . '/' . $dumpid . '.xml';
@@ -68,9 +68,6 @@ if($_GET['dfile'] != null) {
 			fwrite($fp, $outStr);
 			fclose($fp);
 		}
-		
-global $use_browser_xslt;
-$use_browser_xslt = true;
 
 		if($_GET['type'] == 'xml') {
 			header("Content-Disposition: filename=\"" . urlencode($cache_filename) . "\"");
@@ -108,7 +105,7 @@ $use_browser_xslt = true;
 		fwrite($handle, $binData);
 		fclose($handle);
 
-		$cmdpath = $stackwalker_path . " " . $tmpfname; 
+		$cmdpath = $stackwalker_path . " " . $tmpfname . " /Users/dwimsey/Sites/flyswatter/symbols";
 		header('Content-Type: text/plain');
 		passthru(escapeshellcmd($cmdpath));
 
@@ -120,7 +117,7 @@ $use_browser_xslt = true;
 		fwrite($handle, $binData);
 		fclose($handle);
 
-		$cmdpath = $stackwalker_path . " -m " . $tmpfname . " /Users/dwimsey/Sites/flyswatter/symbols";; 
+		$cmdpath = $stackwalker_path . " -m " . $tmpfname . " /Users/dwimsey/Sites/flyswatter/symbols"; 
 		header('Content-Type: text/plain');
 		passthru(escapeshellcmd($cmdpath));
 

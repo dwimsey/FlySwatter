@@ -60,9 +60,6 @@ foreach($_POST as $paramName => $paramValue) {
 	$params->appendChild($xmlDoc->createElement($paramName, $paramValue));
 }
 
-// Add our timestamp
-$params->appendChild($xmlDoc->createElement('SubmissionTimestamp', time()));
-
 $params = $root->appendChild($xmlDoc->createElement("UploadEnvironment")); 
 foreach($_SERVER as $paramName => $paramValue) {
 	if($paramName == null) {
@@ -79,6 +76,8 @@ foreach($_SERVER as $paramName => $paramValue) {
 		}
 	}
 }
+// Add our timestamp
+$params->appendChild($xmlDoc->createElement('SubmissionTimestamp', time()));
 
 $files = $root->appendChild($xmlDoc->createElement("Files")); 
 
