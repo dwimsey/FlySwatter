@@ -198,6 +198,11 @@ class MinidumpInfo {
 		//$xmlString = '';
 		return($xmlString);
 	}
+	
+	function LoadXml($xmlString) {
+		
+		return(false);
+	}
 }
 
 ?>
