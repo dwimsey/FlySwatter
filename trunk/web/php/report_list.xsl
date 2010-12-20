@@ -51,6 +51,36 @@
 											<xsl:when test="OSVersion = &quot;6.1.7600&quot;">
 												Windows 7
 											</xsl:when>
+											<xsl:when test="OSVersion = &quot;6.1.7600 Service Pack 1&quot;">
+												Windows 7 SP1
+											</xsl:when>
+											<xsl:when test="OSVersion = &quot;6.1.7600 Service Pack 2&quot;">
+												Windows 7 SP2
+											</xsl:when>
+											<xsl:when test="OSVersion = &quot;6.1.7600 Service Pack 3&quot;">
+												Windows 7 SP3
+											</xsl:when>
+											<xsl:when test="OSVersion = &quot;6.0.7600&quot;">
+												Windows Vista
+											</xsl:when>
+											<xsl:when test="OSVersion = &quot;6.0.6000 Service Pack 1&quot;">
+												Windows Vista SP1
+											</xsl:when>
+											<xsl:when test="OSVersion = &quot;6.0.6000 Service Pack 2&quot;">
+												Windows Vista SP2
+											</xsl:when>
+											<xsl:when test="OSVersion = &quot;5.1.2600&quot;">
+												WindowsXP
+											</xsl:when>
+											<xsl:when test="OSVersion = &quot;5.1.2600 Service Pack 1&quot;">
+												WindowsXP SP1
+											</xsl:when>
+											<xsl:when test="OSVersion = &quot;5.1.2600 Service Pack 2&quot;">
+												WindowsXP SP2
+											</xsl:when>
+											<xsl:when test="OSVersion = &quot;5.1.2600 Service Pack 3&quot;">
+												WindowsXP SP3
+											</xsl:when>
 											<xsl:otherwise>
 												<xsl:value-of select="OSName"/> (<xsl:value-of select="OSVersion"/>)
 											</xsl:otherwise>
