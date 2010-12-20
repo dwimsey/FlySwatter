@@ -22,9 +22,9 @@ class ThreadInfo {
 class StackEntry {
 	public $Depth = NULL;
 	public $Module = NULL;
-//	public $Unknown1 = NULL;
-//	public $Unknown2 = NULL;
-//	public $Unknown3 = NULL;
+	public $Function = NULL;
+	public $File = NULL;
+	public $Line = NULL;
 	public $Address = NULL;
 }
 
@@ -159,9 +159,43 @@ class MinidumpInfo {
 	
 	function ReadMinidumpFile($minidump_filename) {
 		global $stackwalker_path;
+		global $cache_path;
+
 		$cmdpath = $stackwalker_path . " -m " . $minidump_filename . " /Users/dwimsey/Sites/flyswatter/symbols";
 		exec(escapeshellcmd($cmdpath), &$output);
 		return($this->ParseMinidumpStackWalk($output));
+	}
+	
+	function MD() {
+		$cache_filename = $dumpid . '_md' . $dfile . '.xml';
+		$cache_file = $cache_dir . '/' . $cache_filename;
+		$outStr = '';
+		if(file_exists($cache_file)) {
+			$fp = fopen($cache_file, 'r');
+			if($fp) {
+				$outStr = fread($fp, filesize($cache_file));
+				fclose($fp);
+			}
+		}
+
+		// if we haven't got an xml string by here, reprocess it and recache it		
+		if($outStr == '') {
+			$tmpfname = tempnam("/tmp", "dmp");
+	
+			$handle = fopen($tmpfname, "w");
+			fwrite($handle, $binData);
+			fclose($handle);
+	
+			$stacktrace = new MinidumpInfo();
+			$stacktrace->ReadMinidumpFile($tmpfname);
+			unlink($tmpfname);
+	
+			$outStr = $stacktrace->GetXML();
+			$fp =fopen($cache_file, 'w+');
+			fwrite($fp, $outStr);
+			fclose($fp);
+		}
+		
 	}
 
 	function GetXML() {
@@ -195,8 +229,120 @@ class MinidumpInfo {
 		}
 		$xmlString .= '</Threads>';
 		$xmlString .= '</MinidumpSummary>';
-		//$xmlString = '';
 		return($xmlString);
+	}
+	
+	function FromXML($xmlString) {
+	
+		$xml = simplexml_load_string($xmlString);
+
+		$result = $xml->xpath("/MinidumpSummary/OS/Name");
+		$this->OSName = $result[0];
+		$result = $xml->xpath("/MinidumpSummary/OS/Version");
+		$this->OSVersion = $result[0];
+
+		$result = $xml->xpath("/MinidumpSummary/CPU/Architecture");
+		$this->OSArchitecture = $result[0];
+		$result = $xml->xpath("/MinidumpSummary/CPU/Model");
+		$this->CPUModel = $result[0];
+		$result = $xml->xpath("/MinidumpSummary/CPU/Count");
+		$this->CPUCount = $result[0];
+
+		$result = $xml->xpath("/MinidumpSummary/ExceptionInfo/Reason");
+		if($result) {
+			$this->CrashReason = $result[0];
+		} else {
+			$this->CrashReason = NULL;
+		}
+		$result = $xml->xpath("/MinidumpSummary/ExceptionInfo/Address");
+		if($result) {
+			$this->CrashData = $result[0];
+		} else {
+			$this->CrashData = NULL;
+		}
+		$result = $xml->xpath("/MinidumpSummary/ExceptionInfo/Assertion");
+		if($result) {
+			$this->CrashAssertion = $result[0];
+		} else {
+			$this->CrashAssertion = NULL;
+		}
+
+		$this->LoadedModules = array();
+
+		$xmlmodules = $xml->xpath("/MinidumpSummary/ModuleInfo");
+		$rcount = count($xmlmodules);
+		if($rcount > 0) {
+			
+			$i = 0;
+			for($i = 0; $i < $rcount; $i++) {
+				$res = $xmlmodules[$i];
+
+				$mInfo = new ModuleInfo();
+
+				$result = $res->xpath("Name");
+				$mInfo->Name = $result[0];
+				$result = $res->xpath("PDBFile");
+				$mInfo->PDBFile = $result[0];
+				$result = $res->xpath("Version");
+				$mInfo->Version = $result[0];
+				$result = $res->xpath("Checksum");
+				$mInfo->Checksum = $result[0];
+				$result = $res->xpath("LowAddress");
+				$mInfo->FirstMemoryMappedAddress = $result[0];
+				$result = $res->xpath("HighAddress");
+				$mInfo->LastMemoryMappedAddress = $result[0];
+				$result = $res->xpath("HasEntryPoint");
+				$mInfo->IsMain = $result[0];
+				$this->LoadedModules[$i] = $mInfo;
+			}
+		}
+		
+		$this->Threads = array();
+					
+		$xmlThreads = $xml->xpath("/MinidumpSummary/Threads/ThreadInfo");
+		$rcount = count($xmlThreads);
+		if($rcount > 0) {
+			
+			$i = 0;
+			for($i = 0; $i < $rcount; $i++) {
+				$res = $xmlThreads[$i];
+
+				$tInfo = new ThreadInfo();
+
+				$result = $res->xpath("ThreadNumber");
+				$tInfo->ThreadNumber = $result[0];
+				
+				$tInfo->Stack = array();
+				// load stack entries
+				$sresults = $res->xpath("StackEntry");
+				$ii = 0;
+				$xcount = count($sresults);
+				for($ii = 0; $ii < $xcount; $ii++) {
+					$sres = $sresults[$ii];
+
+					$sInfo = new StackEntry();
+				
+					$sresult = $sres->xpath("Depth");
+					$sInfo->Depth = $sresult[0];
+					$sresult = $sres->xpath("Module");
+					$sInfo->Module = $sresult[0];
+					$sresult = $sres->xpath("Function");
+					$sInfo->Function = $sresult[0];
+					$sresult = $sres->xpath("File");
+					$sInfo->File = $sresult[0];
+					$sresult = $sres->xpath("Line");
+					$sInfo->Line = $sresult[0];
+					$sresult = $sres->xpath("Address");
+					$sInfo->Address = $sresult[0];
+
+					$tInfo->Stack[$ii] = $sInfo;
+				}
+				$this->Threads[$i] = $tInfo;
+
+			}
+			
+		}
+		return(true);
 	}
 	
 	function LoadXml($xmlString) {
