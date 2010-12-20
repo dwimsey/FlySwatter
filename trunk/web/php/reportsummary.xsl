@@ -326,7 +326,7 @@
 										</span>
 									</xsl:when>
 									<xsl:otherwise>
-									<span xml:space="preserve"><a><xsl:attribute name="href">reportsummary.php?dumpid=<xsl:value-of select="/UploadedDebugReport/Parameters/FlyTrapCrashId"/>&amp;rfile=<xsl:value-of select="substring-after(name(.), &quot;FlyTrap_AttachRegKeys_&quot;)"/>&amp;mode=view</xsl:attribute>View</a> - <a><xsl:attribute name="href">reportsummary.php?dumpid=<xsl:value-of select="/UploadedDebugReport/Parameters/FlyTrapCrashId"/>&amp;rfile=<xsl:value-of select="substring-after(name(.), &quot;AttachedRegKey_&quot;)"/></xsl:attribute>Download</a></span>
+									<span xml:space="preserve"><a><xsl:attribute name="href">reportsummary.php?dumpid=<xsl:value-of select="/UploadedDebugReport/Parameters/FlyTrapCrashId"/>&amp;rfile=<xsl:value-of select="substring-after(name(.), &quot;AttachedRegKey_&quot;)"/>&amp;mode=view</xsl:attribute>View</a> - <a><xsl:attribute name="href">reportsummary.php?dumpid=<xsl:value-of select="/UploadedDebugReport/Parameters/FlyTrapCrashId"/>&amp;rfile=<xsl:value-of select="substring-after(name(.), &quot;AttachedRegKey_&quot;)"/></xsl:attribute>Download</a></span>
 									</xsl:otherwise>
 								</xsl:choose>
 							</td>
