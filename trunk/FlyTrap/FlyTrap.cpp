@@ -947,7 +947,7 @@ wchar_t *DumpRegistryKey(wchar_t *regPath)
 		data = (LPBYTE)calloc(dataSiz + 1, sizeof(wchar_t));
 		if(data == NULL) {
 			// couldn't allocate the memory for the data stored, log this condition and skip to the next
-			tmpPtr = mprintf(L"%s\"%s\"=hex(%d):!!Error: Could allocate memory for data buffer, %d bytes requested.", dumpOut, vName, type, (dataSiz + 1 * sizeof(wchar_t)));
+			tmpPtr = mprintf(L"%s%s=hex(%d):!!Error: Could allocate memory for data buffer, %d bytes requested.", dumpOut, vName, type, (dataSiz + 1 * sizeof(wchar_t)));
 			free(dumpOut);
 			dumpOut = tmpPtr;
 			break;
@@ -968,6 +968,7 @@ wchar_t *DumpRegistryKey(wchar_t *regPath)
 		}
 		switch(type) {
 			case REG_SZ:
+			case REG_EXPAND_SZ:
 				((wchar_t*)data)[dataSiz] = L'\0';
 				r = 1;
 				// determine if the string can be written to a file without special encoding
@@ -978,19 +979,18 @@ wchar_t *DumpRegistryKey(wchar_t *regPath)
 					}
 				}
 				if(r == 1) {
-					tmpPtr = mprintf(L"%s\"%s\"=\"%s\"\r\n", dumpOut, vName, (wchar_t*)data);
+					tmpPtr = mprintf(L"%s%s=\"%s\"\r\n", dumpOut, vName, (wchar_t*)data);
 					free(dumpOut);
 					dumpOut = tmpPtr;
 					break;
 				}
 			case REG_MULTI_SZ:
-			case REG_EXPAND_SZ:
 			case REG_BINARY:
 				// the text has some non-printable values in it, we'll store it as hex
 				if(type == REG_BINARY) {
-					tmpPtr = mprintf(L"%s\"%s\"=hex:", dumpOut, vName);
+					tmpPtr = mprintf(L"%s%s=hex:", dumpOut, vName);
 				} else {
-					tmpPtr = mprintf(L"%s\"%s\"=hex(%d):", dumpOut, vName, type);
+					tmpPtr = mprintf(L"%s%s=hex(%d):", dumpOut, vName, type);
 				}
 				free(dumpOut);
 				dumpOut = tmpPtr;
@@ -1017,12 +1017,12 @@ wchar_t *DumpRegistryKey(wchar_t *regPath)
 				dumpOut = ttmpPtr;
 				break;
 			case REG_QWORD:
-				tmpPtr = mprintf(L"%s\"%s\"=qword:%ll\r\n", dumpOut, vName, (*((DWORD*)data)));
+				tmpPtr = mprintf(L"%s%s=qword:%ll\r\n", dumpOut, vName, (*((DWORD*)data)));
 				free(dumpOut);
 				dumpOut = tmpPtr;
 				break;
 			case REG_DWORD:
-				tmpPtr = mprintf(L"%s\"%s\"=dword:%8.8X\r\n", dumpOut, vName, (*((DWORD*)data)));
+				tmpPtr = mprintf(L"%s%s=dword:%8.8X\r\n", dumpOut, vName, (*((DWORD*)data)));
 				free(dumpOut);
 				dumpOut = tmpPtr;
 				break;
