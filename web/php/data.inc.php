@@ -40,6 +40,7 @@ class ReportInfo {
 	function LoadFile($filename) {
 		global $cache_dir;
 		global $report_dir;
+		global $cache_minidump_xml;
 
 		if(!file_exists($filename)) {
 			return(false);
@@ -71,22 +72,43 @@ class ReportInfo {
 			$this->DateSubmitted = '';
 		}
 
-		$tmpfname = tempnam("/tmp", "dmp");
+		$outStr = '';
+		$minidump = NULL;
+		$cache_file = NULL;
+		if($cache_minidump_xml == 1) {
+			$cache_filename = $this->DumpId . '_0.xml';
+			$cache_file = $cache_dir . '/md/' . $cache_filename;
+			if(file_exists($cache_file)) {
+				$fp = fopen($cache_file, 'r');
+				if($fp) {
+					$outStr = fread($fp, filesize($cache_file));
+					fclose($fp);
+					$minidump = new MinidumpInfo();
+					if(!$minidump->FromXML($outStr)) {
+						$minidump = NULL;
+					}
+				}
+			}
+		}
+		// if we haven't got an xml string by here, reprocess it and recache it		
+		if($minidump == NULL) {
+			$tmpfname = tempnam("/tmp", "dmp");
+			$result = $xml->xpath("/UploadedDebugReport/Files/File[". ($dfile + 1) ."]/Data");
+			$binData = base64_decode($result['0']);
 
-		$fn = $report_dir . '/' . $this->DumpId . '.xml';
-		$mdXml = simplexml_load_file($fn);
+			$minidump = new MinidumpInfo();
+			$minidump->ReadMinidumpData($this->DumpId, 0, $binData);
+	
+			if($cache_minidump_xml == 1) {
+				$outStr = $minidump->GetXML();
+				$fp =fopen($cache_file, "w");
+				if($fp != false) {
+					fwrite($fp, $outStr);
+					fclose($fp);
+				}
+			}
+		}
 		
-		$result = $mdXml->xpath("/UploadedDebugReport/Files/File[". ($dfile + 1) ."]/Data");
-		$binData = base64_decode($result['0']);
-
-		$handle = fopen($tmpfname, "w");
-		fwrite($handle, $binData);
-		fclose($handle);
-
-		$minidump = new MinidumpInfo();
-		$minidump->ReadMinidumpFile($tmpfname);
-		unlink($tmpfname);
-
 		$this->Minidump = $minidump;
 		return(true);
 	}
