@@ -213,14 +213,14 @@ unsigned char *base64encode(unsigned char *inBuf, size_t inSize, int lineSize)
 		}
 	}
 		
-	blockLen = (nextIn - inBuf) - (inSize - 2);
+	blockLen = abs((nextIn - inBuf) - inSize);
 	if(blockLen > 0) {
 		base64encodeblock(nextIn, nextOut, blockLen);
 		nextIn += blockLen;
 		nextOut += 4;
 	}
 	return(outBuf);
-	}
+}
 
 /*
 ** base64decode
