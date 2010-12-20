@@ -1091,7 +1091,7 @@ map<wstring, wstring> *CreateParamMap(const LPFLYTRAPPARAM params, const int par
 	int iCount;
 	wchar_t *offset;
 	wchar_t nameBuf[64];
-	unsigned char inBuf[512];	// this is a char (not wchar_t) because its used for storing bytes of binary data
+	unsigned char *inBuf;	// this is a char (not wchar_t) because its used for storing bytes of binary data
 	wchar_t *outBuf = NULL;
 	wchar_t *fnameBuf;
 	wchar_t *tfnameBuf;
@@ -1102,7 +1102,7 @@ map<wstring, wstring> *CreateParamMap(const LPFLYTRAPPARAM params, const int par
 	int fSize = 0;
 	int fr;
 	wchar_t *expandedFName = NULL;
-
+#define FLYTRAP_FILEREAD_BUFSIZE	2040
 	for(int i = 0; i < params_len; i++) {
 		if(params[i].name == NULL) {
 			// blank entry, just skip it.  We could probably break out of the loop but we won't do that since
@@ -1135,10 +1135,16 @@ map<wstring, wstring> *CreateParamMap(const LPFLYTRAPPARAM params, const int par
 								free(expandedFName);
 							} else {
 								free(expandedFName);
+								inBuf = (unsigned char*)malloc(FLYTRAP_FILEREAD_BUFSIZE * sizeof(char));
+								if(inBuf == NULL) {
+									// out of memory!
+									// @TODO Do something about this error
+									break;
+								}
 								outBuf = wcsdup(L"");
 								while(!feof(fp)) {
 									// loop through the file reading in the data and adding it to the base64 encoded output
-									fr = fread(&inBuf, 1, 512, fp);
+									fr = fread(inBuf, sizeof(char), FLYTRAP_FILEREAD_BUFSIZE, fp);
 									int fen = ferror(fp);
 									if(fen != 0) {
 										tb = outBuf;
@@ -1162,6 +1168,7 @@ map<wstring, wstring> *CreateParamMap(const LPFLYTRAPPARAM params, const int par
 									free(wencodedStr);
 								}
 								fclose(fp);
+								free(inBuf);
 								tb = outBuf;
 
 								expandedFName = ExpandEnvVarsInStr(fnameBuf);
