@@ -1201,9 +1201,15 @@ map<wstring, wstring> *CreateParamMap(const LPFLYTRAPPARAM params, const int par
 							} else {
 								free(expandedFName);
 								outBuf = wcsdup(L"");
+								inBuf = (unsigned char*)malloc(FLYTRAP_FILEREAD_BUFSIZE * sizeof(char));
+								if(inBuf == NULL) {
+									// out of memory!
+									// @TODO Do something about this error
+									break;
+								}
 								while(!feof(fp)) {
 									// loop through the file reading in the data and adding it to the base64 encoded output
-									fr = fread(&inBuf, 1, 512, fp);
+									fr = fread(&inBuf, 1, FLYTRAP_FILEREAD_BUFSIZE, fp);
 									int fen = ferror(fp);
 									if(fen != 0) {
 										tb = outBuf;
@@ -1227,6 +1233,7 @@ map<wstring, wstring> *CreateParamMap(const LPFLYTRAPPARAM params, const int par
 									free(tb);
 									free(wencodedStr);
 								}
+								free(inBuf);
 								fclose(fp);
 								tb = outBuf;
 								expandedFName = ExpandEnvVarsInStr(fnameBuf);
