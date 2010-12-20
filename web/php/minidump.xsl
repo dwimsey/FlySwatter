@@ -58,7 +58,7 @@
 											<td>Function</td>
 											<td>File</td>
 											<td>Line</td>
-											<td>Offset</td>
+											<td>Address</td>
 										</tr>
 									</thead>
 									<tbody>

@@ -47,6 +47,9 @@ if($_GET['dfile'] != null) {
 			if($fp) {
 				$outStr = fread($fp, filesize($cache_file));
 				fclose($fp);
+				$stacktrace = new MinidumpInfo();
+				$stacktrace->FromXML($outStr);
+				$outStr = $stacktrace->GetXML();
 			}
 		}
 
