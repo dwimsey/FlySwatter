@@ -4,6 +4,7 @@
 #include "stdafx.h"
 #include "CrashTestDummy.h"
 #include "CrashTestDummyDlg.h"
+#include "../FlyTrap/FlyTrapVersion.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -29,6 +30,8 @@ void DoManualReport(void *windowObject)
 	FlyTrapTriggerReport();
 }
 
+#define REPORT_URL	L"http://10.27.1.242/~dwimsey/flyswatter/sendreport.php"
+//#define REPORT_URL	L"http://192.168.128.239/~dwimsey/flyswatter/sendreport.php"
 CCrashTestDummyApp::CCrashTestDummyApp()
 {
 	int rVal;
@@ -52,47 +55,54 @@ CCrashTestDummyApp::CCrashTestDummyApp()
 	}
 	// Free memory allocated for CommandLineToArgvW arguments.
 	LocalFree(szArglist);
-
-
-
-
-
-	if(inProcServer == 1) {
+	if(inProcServer != 1) {
 		// Use in process exception handling
-		FLYTRAPINITCLIENT(rVal, FlyTrap, L"%APPDATA%\\CrashTestDummy", L"http://10.27.1.242/~dwimsey/sendreport.php", NULL, L"FlyTrap.dll");
+		FLYTRAPINITCLIENT(rVal, FlyTrap, L"%APPDATA%\\CrashTestDummy", REPORT_URL, NULL, L"FlyTrap.dll");
 	} else {
 		// Use Out of Process exception handling, using the builtin FlyTrap crash server.
-		FLYTRAPINITCLIENT(rVal, FlyTrap, L"%APPDATA%\\CrashTestDummy", L"http://10.27.1.242/~dwimsey/sendreport.php", L"FlyTrap.dll", L"FlyTrap.dll");
+		FLYTRAPINITCLIENT(rVal, FlyTrap, L"%APPDATA%\\CrashTestDummy", REPORT_URL, L"FlyTrap.dll", L"FlyTrap.dll");
 	}
 	// @TODO Add this to real documentation system so it can be published somewhere useful
 	// These are used in various other predefined template strings and recommended for all crash reports
-	FlyTrapSetParam(L"AppName", L"CrashTest Dummy");
 	FlyTrapSetParam(L"CompanyShortName", L"RTS");
 	FlyTrapSetParam(L"CompanyName", L"Research Triangle Software");
 	FlyTrapSetParam(L"CompanyLegalName", L"Research Triangle Software, Inc.");
-	FlyTrapSetParam(L"AppVersion", L"0.1.2.3");
-
+	FlyTrapSetParam(L"AppName", L"CrashTest Dummy");
+	FlyTrapSetParam(L"AppGuid", L"EE6EADBF-79A6-4e24-B5D0-6D14945DDA17");
+	FlyTrapSetParam(L"AppVersion", L"0.1.2.4");
+	wchar_t buf[30];
+	wsprintf((LPWSTR)&buf, L"%d", FLYTRAP_VERSION_BUILD);
+	FlyTrapSetParam(L"AppBuildId", (LPWSTR)&buf);
+	FlyTrapSetParam(L"ProductName", L"FlySwatter");
+	FlyTrapSetParam(L"ProductGuid", L"4225E489-0DF5-4673-B854-65D55997EDBC");
+	
 	// This defines what checkpoint file we should use and how many we're expected to be allowed per day, if unset, no checkpoint file will be used and the library will not attempt to limit the number of reports sent
 	// FlyTrapSetParam(L"FlyTrap_CheckpointSettings", L"%APPDATA%\\CrashTestDummy\\fscreport.cpt;5;");
 
 	// This is a semicolon/colon seperated of paths (appropriate for OS) of additional files
 	// to attach to the report
-	FlyTrapSetParam(L"FlyTrap_AttachFiles", L"%APPDATA%\\CrashTestDummy\\Debug.log;C:\\autoexec.bat;c:\\boot.ini");
+	FlyTrapSetParam(FLYTRAP_PARAM_ATTACHFILES_PARAM L"s", L"..\\scripts\\buildver.py;C:\\autoexec.bat;c:\\boot.ini");
 
 	// (MS Windows Only) This is a semicolon seperated list of registry keys to dump and include in the crash report
-	FlyTrapSetParam(L"FlyTrap_AttachRegKeys", L"HKEY_LOCAL_MACHINE\\Software\\CrashTestDummy;HKEY_CURRENT_USER\\Software\\CrashTestDummy;HKEY_CLASSES_ROOT\\CrashTestDummy");
+	FlyTrapSetParam(FLYTRAP_PARAM_ATTACHREGKEY_PARAM L"s", L"HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run;HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run;HKEY_CURRENT_USER\\Software\\CrashTestDummy;HKEY_CLASSES_ROOT\\CrashTestDummy");
 
 	// Any variables prefixed with FlyTrap_CrashAlertDialog_ are not sent with the crash report,
 	// they are just used to configure the alert dialog
 	//
 
-	// This sets the dialog caption text for the crash alert dialog
-//	FlyTrapSetParam(L"FlyTrap_CrashAlertDialog_Title", L"{AppName} has crashed!");
+	// This sets the dialog caption text for the crash/debug report dialog
+	FlyTrapSetParam(FLYTRAP_PARAM_CRASHREPORT_TITLE, L"Error Report - {AppName}");
+	FlyTrapSetParam(FLYTRAP_PARAM_DEBUGREPORT_TITLE, L"Debugging Report - {AppName}");
+
 	// Text to display in the initial display area when the dialog is first displayed
 //	FlyTrapSetParam(L"FlyTrap_CrashAlertDialog_Info1Message", L"Something has caused {AppName} to crash and a crash report has been generated.\r\n\r\nThe crash report may contain confidential information from the program at the time it crashed.\r\n\r\nClick the 'Send' button to send this crash information to {CompanyShortName}.");
 	// This is no string for the more info message, its generated internally
 	// Text to display in the privacy notice area when required
-	FlyTrapSetParam(L"FlyTrap_CrashAlertDialog_Info3Message", L"Reporting this crash will send information about what the program was doing when it crashed to {CompanyLegalName}  The information included may include sections or all of the applications memory while running, information about running processes on your computer, various registry keys related to the way your system and this software is configured, log files relating to this application.  Any of these sources of information may contain confidential information and should only be sent if you are certain it contains only information you trust sending over the Internet.");
+	FlyTrapSetParam(FLYTRAP_PARAM_CRASHREPORT_INFOBUTTON3, L"Reporting error.");
+	FlyTrapSetParam(FLYTRAP_PARAM_DEBUGREPORT_INFOBUTTON3, L"Reporting debug.");
+	
+	FlyTrapSetParam(FLYTRAP_PARAM_CRASHREPORT_WELCOMEMESSAGE, L"Reporting error.");
+	FlyTrapSetParam(FLYTRAP_PARAM_DEBUGREPORT_WELCOMEMESSAGE, L"Reporting debug.");
 	// This sets the text on the button which sends the report to the server
 //	FlyTrapSetParam(L"FlyTrap_CrashAlertDialog_SendButton", L"Send");
 	// This sets the text on the button that does not send anything to the server and destroys the report
@@ -105,7 +115,7 @@ CCrashTestDummyApp::CCrashTestDummyApp()
 //	FlyTrapSetParam(L"FlyTrap_CrashAlertDialog_Info3Button", L"Privacy Information");
 
 	// This one we always set as it hides the button if its not set
-	FlyTrapSetParam(L"FlyTrap_CrashAlertDialog_DontAskCheckbox", L"Don't ask me again!");
+	FlyTrapSetParam(FLYTRAP_PARAM_CRASHREPORT_NOPROMPTCHKBOXLABEL, L"Don't ask me again!");
 
 	//	FlyTrapSetParam(L"FlyTrap_CrashAlertDialog_Info1Button", L"Don't ask me again!");
 

@@ -74,7 +74,7 @@ extern "C" {
 
 
 	// This are used internally and need to be available to all bits
-	int FlyTrapCrashAlert(void *parentWindowHandle, const wchar_t *reportUrl, const wchar_t *miniDumpFilename, const LPFLYTRAPPARAM params, const int params_len);
+	int FlyTrapCrashAlert(void *parentWindowHandle, const wchar_t *reportUrl, const int report_mode, const wchar_t *dumpId, const wchar_t *miniDumpFilename, const LPFLYTRAPPARAM params, const int params_len);
 	bool FlyTrapExceptionFilter(void *ctx, EXCEPTION_POINTERS *exceptionInfo, MDRawAssertionInfo *assertionInfo);
 	void FlyTrapOutOfProcessDumpCallback(void *dump_context, ClientInfo *client_info, const std::wstring *dump_path);
 	bool FlyTrapInProcessDumpCallback(const wchar_t* dumpPath, const wchar_t* dumpId, void* ctx, EXCEPTION_POINTERS* exceptionInfo, MDRawAssertionInfo* assertionInfo, bool dumpSucceeded);

@@ -50,13 +50,13 @@ void FlyTrap_RegisterCrashAlertDialogWindowClass(HINSTANCE hInstance)
 }
 
 typedef struct __FlyTrapCrashAlertDialogInitDataStructure {
-	wchar_t *dumpFileName;
-	wchar_t *dumpDir;
-	wchar_t *dumpId;
-	wchar_t *reportUrl;
+	const wchar_t *dumpFileName;
+	const wchar_t *dumpId;
+	const wchar_t *reportUrl;
 	LPFLYTRAPPARAM params;
 	int params_len;
 	int useTabControl;
+	int report_mode;
 } FLYTRAPCRASHALERTDIALOGINITDATA, *LPFLYTRAPCRASHALERTDIALOGINITDATA;
 
 const wchar_t *FlyTrapGetParamEx(LPFLYTRAPPARAM params, int params_len, const wchar_t *name);
@@ -308,31 +308,52 @@ typedef struct __FSCADHandles {
 	LPFLYTRAPPARAM params;
 	int params_len;
 	int useTabControl;
+	int report_mode;
 } FSCADHANDLE, *LPFSCADHANDLE;
 
 #define FSWS_ISVISIBLE(VAL) ((dHandle->useTabControl==VAL) ? WS_VISIBLE : 0)
 
-
 void SetActiveTab(LPFSCADHANDLE dHandle, int tabPage, BOOL activateTab)
 {
-	wchar_t *tmpPtr;
-	wchar_t *fTmpPtr;
-
+	wchar_t *tmpPtr = NULL;
+	wchar_t *fTmpPtr = NULL;
+	
 	switch(tabPage) {
 		case 0:
-			tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, L"FlyTrap_CrashAlertDialog_Info1Message");
+			if(dHandle->report_mode == FLYTRAP_REPORTMODE_USERTRIGGER) {
+				tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_DEBUGREPORT_INFOMESSAGE1);
+				if(tmpPtr == NULL) {
+					tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_CRASHREPORT_INFOMESSAGE1);
+				}
+			} else {
+				tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_CRASHREPORT_INFOMESSAGE1);
+			}
 			if(tmpPtr == NULL) {
 				tmpPtr = L"Something has caused {AppName} to crash and a crash report has been generated.\r\n\r\nThe crash report may contain confidential information from the program at the time it crashed.\r\n\r\nClick the 'Send' button to send this crash information to {CompanyShortName}.";
 			}
 			break;
 		case 1:
-			tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, L"FlyTrap_CrashAlertDialog_Info2Message");
+			if(dHandle->report_mode == FLYTRAP_REPORTMODE_USERTRIGGER) {
+				tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_DEBUGREPORT_INFOMESSAGE2);
+				if(tmpPtr == NULL) {
+					tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_CRASHREPORT_INFOMESSAGE2);
+				}
+			} else {
+				tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_CRASHREPORT_INFOMESSAGE2);
+			}
 			if(tmpPtr == NULL) {
 				tmpPtr = L"No additional information at this time.";
 			}
 			break;
 		case 2:
-			tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, L"FlyTrap_CrashAlertDialog_Info3Message");
+			if(dHandle->report_mode == FLYTRAP_REPORTMODE_USERTRIGGER) {
+				tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_DEBUGREPORT_INFOMESSAGE3);
+				if(tmpPtr == NULL) {
+					tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_CRASHREPORT_INFOMESSAGE3);
+				}
+			} else {
+				tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_CRASHREPORT_INFOMESSAGE3);
+			}
 			if(tmpPtr == NULL) {
 				tmpPtr = L"Reporting this crash will send information about what the program was doing when it crashed to {CompanyLegalName}\r\n\r\nThe information may include sections or all of the applications memory, information about running programs on your computer, various registry keys related to the way your system and this software is configured, log files relating to this application.  Any of these sources of information may contain confidential information and should only be sent if you are certain it contains only information you are willing to share over the Internet.";
 			}
@@ -415,7 +436,16 @@ void FlyTrapLayoutCrashAlertDialog(LPFSCADHANDLE dHandle, BOOL rePaint)
 		dHandle->useTabControl = 0;
 	}
 
-	int hasPrivacyInfo = (FlyTrapGetParamEx(dHandle->params, dHandle->params_len, L"FlyTrap_CrashAlertDialog_Info3Message") == NULL ? 0 : 1);
+	int hasPrivacyInfo = 1;
+	if(dHandle->report_mode == FLYTRAP_REPORTMODE_USERTRIGGER) {
+		if(FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_DEBUGREPORT_INFOMESSAGE3) != NULL) {
+			hasPrivacyInfo = 1;
+		} else {
+			hasPrivacyInfo = (FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_CRASHREPORT_INFOMESSAGE3) == NULL ? 0 : 1);
+		}
+	} else {
+		hasPrivacyInfo = (FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_CRASHREPORT_INFOMESSAGE3) == NULL ? 0 : 1);
+	}
 
 	if(hasPrivacyInfo == 1) {
 		// put the privacy info on the far right
@@ -519,7 +549,7 @@ void FlyTrapLayoutCrashAlertDialog(LPFSCADHANDLE dHandle, BOOL rePaint)
 	SetActiveTab(dHandle, 0, TRUE);
 }
 
-void InitFlyTrapCrashDialog(HWND hWnd, LPFLYTRAPCRASHALERTDIALOGINITDATA idPtr)
+void InitFlyTrapReportDialog(HWND hWnd, LPFLYTRAPCRASHALERTDIALOGINITDATA idPtr)
 {
 	LPFSCADHANDLE dHandle;
 	wchar_t *tmpPtr = NULL;
@@ -541,6 +571,7 @@ void InitFlyTrapCrashDialog(HWND hWnd, LPFLYTRAPCRASHALERTDIALOGINITDATA idPtr)
 	dHandle->params = idPtr->params;
 	dHandle->params_len = idPtr->params_len;
 	dHandle->useTabControl = idPtr->useTabControl;
+	dHandle->report_mode = idPtr->report_mode;
 	SetWindowLongPtr(dHandle->hWnd, DWLP_USER, (LONG_PTR)dHandle);
 	CenterWindow(hWnd);
 
@@ -571,7 +602,14 @@ void InitFlyTrapCrashDialog(HWND hWnd, LPFLYTRAPCRASHALERTDIALOGINITDATA idPtr)
 		// Add tabs
 		tie.mask = TCIF_TEXT | TCIF_IMAGE;
 		tie.iImage = -1;
-		tie.pszText = (wchar_t*)FlyTrapGetParamEx(idPtr->params, idPtr->params_len, L"FlyTrap_CrashAlertDialog_Info1Button");
+		if(dHandle->report_mode == FLYTRAP_REPORTMODE_USERTRIGGER) {
+			tie.pszText = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_DEBUGREPORT_INFOBUTTON1);
+			if(tie.pszText == NULL) {
+				tie.pszText = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_CRASHREPORT_INFOBUTTON1);
+			}
+		} else {
+			tie.pszText = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_CRASHREPORT_INFOBUTTON1);
+		}
 		if(tie.pszText == NULL) {
 			tie.pszText = L"General";
 		}
@@ -579,7 +617,14 @@ void InitFlyTrapCrashDialog(HWND hWnd, LPFLYTRAPCRASHALERTDIALOGINITDATA idPtr)
 			// TODO: Add error handling if the tab can't be added
 		}
 
-		tie.pszText = (wchar_t*)FlyTrapGetParamEx(idPtr->params, idPtr->params_len, L"FlyTrap_CrashAlertDialog_Info2Button");
+		if(dHandle->report_mode == FLYTRAP_REPORTMODE_USERTRIGGER) {
+			tie.pszText = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_DEBUGREPORT_INFOBUTTON2);
+			if(tie.pszText == NULL) {
+				tie.pszText = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_CRASHREPORT_INFOBUTTON2);
+			}
+		} else {
+			tie.pszText = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_CRASHREPORT_INFOBUTTON2);
+		}
 		if(tie.pszText == NULL) {
 			tie.pszText = L"Crash Report";
 		}
@@ -588,8 +633,25 @@ void InitFlyTrapCrashDialog(HWND hWnd, LPFLYTRAPCRASHALERTDIALOGINITDATA idPtr)
 		}
 
 		// We only add the privacy tab if we have a privacy statement
-		if(FlyTrapGetParamEx(idPtr->params, idPtr->params_len, L"FlyTrap_CrashAlertDialog_Info3Message") != NULL) {
-			tie.pszText = (wchar_t*)FlyTrapGetParamEx(idPtr->params, idPtr->params_len, L"FlyTrap_CrashAlertDialog_Info3Button");
+		if(dHandle->report_mode == FLYTRAP_REPORTMODE_USERTRIGGER) {
+			tie.pszText = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_DEBUGREPORT_INFOBUTTON3);
+			if(tie.pszText == NULL) {
+				tie.pszText = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_CRASHREPORT_INFOBUTTON3);
+			}
+		} else {
+			tie.pszText = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_CRASHREPORT_INFOBUTTON3);
+		}
+
+		// We only add the privacy tab if we have a privacy statement
+		if(dHandle->report_mode == FLYTRAP_REPORTMODE_USERTRIGGER) {
+			tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_CRASHREPORT_INFOMESSAGE3);
+			if(tmpPtr == NULL) {
+				tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_CRASHREPORT_INFOMESSAGE3);
+			}
+		} else {
+			tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_CRASHREPORT_INFOMESSAGE3);
+		}
+		if(tmpPtr != NULL) {	
 			if(tie.pszText == NULL) {
 				tie.pszText = L"Privacy Information";
 			}
@@ -605,9 +667,16 @@ void InitFlyTrapCrashDialog(HWND hWnd, LPFLYTRAPCRASHALERTDIALOGINITDATA idPtr)
 	dHandle->btnOk = CreateWindowEx(0, L"BUTTON", L"Send", WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON | BS_PUSHBUTTON | BS_VCENTER | BS_CENTER | BS_TEXT, (cRect.right - ((btnRect.right + btnRect.left) * 2)), (cRect.bottom - (btnRect.bottom + btnRect.top)), btnRect.right, btnRect.bottom, hWnd, NULL, fsgh_Instance, NULL);
 	if(dHandle->btnOk != NULL) {
 		SetWindowLongPtrW(dHandle->btnOk, GWLP_ID, IDC_BTN_SEND);
-		tmpPtr = (wchar_t*)FlyTrapGetParamEx(idPtr->params, idPtr->params_len, L"FlyTrap_CrashAlertDialog_SendButton");
+		if(dHandle->report_mode == FLYTRAP_REPORTMODE_USERTRIGGER) {
+			tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_DEBUGREPORT_SENDBUTTON);
+			if(tmpPtr == NULL) {
+				tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_CRASHREPORT_SENDBUTTON);
+			}
+		} else {
+			tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_CRASHREPORT_SENDBUTTON);
+		}
 		if(tmpPtr != NULL) {
-			fTmpPtr = formatStr(tmpPtr, idPtr->params, idPtr->params_len);
+			fTmpPtr = formatStr(tmpPtr, dHandle->params, dHandle->params_len);
 			SetWindowTextW(dHandle->btnOk, fTmpPtr);
 			free(fTmpPtr);
 		}
@@ -616,9 +685,16 @@ void InitFlyTrapCrashDialog(HWND hWnd, LPFLYTRAPCRASHALERTDIALOGINITDATA idPtr)
 	dHandle->btnCancel = CreateWindowEx(0, L"BUTTON", L"Cancel", WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON | BS_VCENTER | BS_CENTER | BS_TEXT, (cRect.right - (btnRect.right + btnRect.left)), (cRect.bottom - (btnRect.bottom + btnRect.top)), btnRect.right, btnRect.bottom, hWnd, NULL, fsgh_Instance, NULL);
 	if(dHandle->btnCancel != NULL) {
 		SetWindowLongPtrW(dHandle->btnCancel, GWLP_ID, IDC_BTN_CANCEL);
-		tmpPtr = (wchar_t*)FlyTrapGetParamEx(idPtr->params, idPtr->params_len, L"FlyTrap_CrashAlertDialog_CancelButton");
+		if(dHandle->report_mode == FLYTRAP_REPORTMODE_USERTRIGGER) {
+			tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_DEBUGREPORT_CANCELBUTTON);
+			if(tmpPtr == NULL) {
+				tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_CRASHREPORT_CANCELBUTTON);
+			}
+		} else {
+			tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_CRASHREPORT_CANCELBUTTON);
+		}
 		if(tmpPtr != NULL) {
-			fTmpPtr = formatStr(tmpPtr, idPtr->params, idPtr->params_len);
+			fTmpPtr = formatStr(tmpPtr, dHandle->params, dHandle->params_len);
 			SetWindowTextW(dHandle->btnCancel, fTmpPtr);
 			free(fTmpPtr);
 		}
@@ -630,10 +706,17 @@ void InitFlyTrapCrashDialog(HWND hWnd, LPFLYTRAPCRASHALERTDIALOGINITDATA idPtr)
 	dHandle->btnGeneral = CreateWindowEx(0, L"BUTTON", L"Welcome", WS_CHILD | FSWS_ISVISIBLE(0) | BS_PUSHBUTTON | BS_VCENTER | BS_CENTER | BS_TEXT, txtRect.left, (cRect.bottom - ((btnRect.top * 2) + (btnRect.bottom * 3))), btnRect.right, btnRect.bottom, hWnd, NULL, fsgh_Instance, NULL);
 	if(dHandle->btnGeneral != NULL) {
 		SetWindowLongPtrW(dHandle->btnGeneral, GWLP_ID, IDC_BTN_GENERAL);
-		tmpPtr = (wchar_t*)FlyTrapGetParamEx(idPtr->params, idPtr->params_len, L"FlyTrap_CrashAlertDialog_Info1Button");
+		if(dHandle->report_mode == FLYTRAP_REPORTMODE_USERTRIGGER) {
+			tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_DEBUGREPORT_INFOBUTTON1);
+			if(tmpPtr == NULL) {
+				tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_CRASHREPORT_INFOBUTTON1);
+			}
+		} else {
+			tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_CRASHREPORT_INFOBUTTON1);
+		}
 		if(tmpPtr != NULL) {
-			fTmpPtr = formatStr(tmpPtr, idPtr->params, idPtr->params_len);
-			SetWindowTextW(dHandle->btnGeneral, fTmpPtr);
+			fTmpPtr = formatStr(tmpPtr, dHandle->params, dHandle->params_len);
+			//SetWindowTextW(dHandle->btnGeneral, fTmpPtr);
 			free(fTmpPtr);
 		}
 	}
@@ -642,9 +725,16 @@ void InitFlyTrapCrashDialog(HWND hWnd, LPFLYTRAPCRASHALERTDIALOGINITDATA idPtr)
 	dHandle->btnMoreInfo = CreateWindowEx(0, L"BUTTON", L"More Info", WS_CHILD | FSWS_ISVISIBLE(0) | BS_PUSHBUTTON | BS_VCENTER | BS_CENTER | BS_TEXT, txtRect.left, (cRect.bottom - ((btnRect.top * 2) + (btnRect.bottom * 3))), btnRect.right, btnRect.bottom, hWnd, NULL, fsgh_Instance, NULL);
 	if(dHandle->btnMoreInfo != NULL) {
 		SetWindowLongPtrW(dHandle->btnMoreInfo, GWLP_ID, IDC_BTN_MOREINFO);
-		tmpPtr = (wchar_t*)FlyTrapGetParamEx(idPtr->params, idPtr->params_len, L"FlyTrap_CrashAlertDialog_Info2Button");
+		if(dHandle->report_mode == FLYTRAP_REPORTMODE_USERTRIGGER) {
+			tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_DEBUGREPORT_INFOBUTTON2);
+			if(tmpPtr == NULL) {
+				tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_CRASHREPORT_INFOBUTTON2);
+			}
+		} else {
+			tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_CRASHREPORT_INFOBUTTON2);
+		}
 		if(tmpPtr != NULL) {
-			fTmpPtr = formatStr(tmpPtr, idPtr->params, idPtr->params_len);
+			fTmpPtr = formatStr(tmpPtr, dHandle->params, dHandle->params_len);
 			SetWindowTextW(dHandle->btnMoreInfo, fTmpPtr);
 			free(fTmpPtr);
 		}
@@ -654,13 +744,30 @@ void InitFlyTrapCrashDialog(HWND hWnd, LPFLYTRAPCRASHALERTDIALOGINITDATA idPtr)
 	dHandle->btnPrivacy = CreateWindowEx(0, L"BUTTON", L"Privacy Info", WS_CHILD | FSWS_ISVISIBLE(0) | BS_PUSHBUTTON | BS_VCENTER | BS_CENTER | BS_TEXT, txtRect.left, (cRect.bottom - ((btnRect.top * 2) + (btnRect.bottom * 3))), btnRect.right, btnRect.bottom, hWnd, NULL, fsgh_Instance, NULL);
 	if(dHandle->btnPrivacy != NULL) {
 		SetWindowLongPtrW(dHandle->btnPrivacy, GWLP_ID, IDC_BTN_PRIVACY);
-		tmpPtr = (wchar_t*)FlyTrapGetParamEx(idPtr->params, idPtr->params_len, L"FlyTrap_CrashAlertDialog_Info3Button");
+		if(dHandle->report_mode == FLYTRAP_REPORTMODE_USERTRIGGER) {
+			tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_DEBUGREPORT_INFOBUTTON3);
+			if(tmpPtr == NULL) {
+				tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_CRASHREPORT_INFOBUTTON3);
+			}
+		} else {
+			tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_CRASHREPORT_INFOBUTTON3);
+		}
 		if(tmpPtr != NULL) {
-			fTmpPtr = formatStr(tmpPtr, idPtr->params, idPtr->params_len);
+			fTmpPtr = formatStr(tmpPtr, dHandle->params, dHandle->params_len);
 			SetWindowTextW(dHandle->btnPrivacy, fTmpPtr);
 			free(fTmpPtr);
 		}
-		if(FlyTrapGetParamEx(idPtr->params, idPtr->params_len, L"FlyTrap_CrashAlertDialog_Info3Message") == NULL) {
+
+		if(dHandle->report_mode == FLYTRAP_REPORTMODE_USERTRIGGER) {
+			tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_DEBUGREPORT_INFOMESSAGE3);
+			if(tmpPtr == NULL) {
+				tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_CRASHREPORT_INFOMESSAGE3);
+			}
+		} else {
+			tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_CRASHREPORT_INFOMESSAGE3);
+		}
+
+		if(tmpPtr == NULL) {
 			ShowWindow(dHandle->btnPrivacy, SW_HIDE);
 		}
 	}
@@ -671,14 +778,18 @@ void InitFlyTrapCrashDialog(HWND hWnd, LPFLYTRAPCRASHALERTDIALOGINITDATA idPtr)
 	dHandle->chkDontAsk = CreateWindowEx(0, L"BUTTON", L"Don't ask me again!", WS_CHILD | BS_AUTOCHECKBOX | BS_VCENTER | BS_LEFT, btnRect.left, (cRect.bottom - (btnRect.top + btnRect.bottom - (chkRect.top/2))), ((cRect.right - btnRect.left) - (((btnRect.left + btnRect.right) * 2) + btnRect.left)), chkRect.bottom, hWnd, NULL, fsgh_Instance, NULL);
 	if(dHandle->chkDontAsk != NULL) {
 		SetWindowLongPtrW(dHandle->chkDontAsk, GWLP_ID, IDC_CHK_DONTASK);
-		tmpPtr = (wchar_t*)FlyTrapGetParamEx(idPtr->params, idPtr->params_len, L"FlyTrap_CrashAlertDialog_DontAskCheckbox");
-		if(tmpPtr != NULL) {
-			ShowWindow(dHandle->chkDontAsk, SW_SHOW);
-			fTmpPtr = formatStr(tmpPtr, idPtr->params, idPtr->params_len);
-			SetWindowTextW(dHandle->chkDontAsk, fTmpPtr);
-			free(fTmpPtr);
-		} else {
-			ShowWindow(dHandle->chkDontAsk, SW_HIDE);
+		// When report_mode is FLYTRAP_REPORTMODE_USERTRIGGER we don't display the 'hide me' checkbox because we
+		// ALWAYS want the dialog displayed
+		if(dHandle->report_mode != FLYTRAP_REPORTMODE_USERTRIGGER) {
+			tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_CRASHREPORT_NOPROMPTCHKBOXLABEL);
+			if(tmpPtr != NULL) {
+				ShowWindow(dHandle->chkDontAsk, SW_SHOW);
+				fTmpPtr = formatStr(tmpPtr, dHandle->params, dHandle->params_len);
+				SetWindowTextW(dHandle->chkDontAsk, fTmpPtr);
+				free(fTmpPtr);
+			} else {
+				ShowWindow(dHandle->chkDontAsk, SW_HIDE);
+			}
 		}
 	}
 
@@ -687,21 +798,41 @@ void InitFlyTrapCrashDialog(HWND hWnd, LPFLYTRAPCRASHALERTDIALOGINITDATA idPtr)
 	dHandle->staticMain = CreateWindowEx(0, L"STATIC", L"Welcome Message", WS_VISIBLE | WS_CHILD | SS_LEFT /*| SS_BLACKRECT */| SS_NOPREFIX, txtRect.left, btnRect.top, (cRect.right - (txtRect.left + btnRect.left)), (cRect.bottom - ((btnRect.top * 4) + (btnRect.bottom * 3))), hWnd, NULL, fsgh_Instance, NULL);
 	if(dHandle->staticMain != NULL) {
 		SetWindowLongPtrW(dHandle->staticMain, GWLP_ID, IDC_STATIC_MAIN);
-		tmpPtr = (wchar_t*)FlyTrapGetParamEx(idPtr->params, idPtr->params_len, L"FlyTrap_CrashAlertDialog_WelcomeMessage");
-		if(tmpPtr == NULL) {
-			tmpPtr = L"Something has caused {AppName} to crash and a crash report has been generated.\r\n\r\nThe crash report may contain confidential information from the program at the time it crashed.\r\n\r\nClick the 'Send' button to send this crash information to {CompanyShortName}.";
+		if(dHandle->report_mode == FLYTRAP_REPORTMODE_USERTRIGGER) {
+			tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_DEBUGREPORT_WELCOMEMESSAGE);
+			if(tmpPtr == NULL) {
+				tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_CRASHREPORT_WELCOMEMESSAGE);
+			}
+		} else {
+			tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_CRASHREPORT_WELCOMEMESSAGE);
 		}
-		fTmpPtr = formatStr(tmpPtr, idPtr->params, idPtr->params_len);
+		if(tmpPtr == NULL) {
+			if(dHandle->report_mode == FLYTRAP_REPORTMODE_USERTRIGGER) {
+				tmpPtr = L"You have requested that a debug report for {AppName} to be generated.\r\n\r\nThe debug report may contain confidential information from the program at the time it was generated.\r\n\r\nClick the 'Send' button to send this debug information to {CompanyShortName}.";
+			} else if(dHandle->report_mode == FLYTRAP_REPORTMODE_CRASH) {
+				tmpPtr = L"Something has caused {AppName} unrecoverable error to occur and an error report has been generated.\r\n\r\nThe error report may contain confidential information from the program at the time the error occurred.\r\n\r\nClick the 'Send' button to send this error information to {CompanyShortName}.";
+			} else {
+				tmpPtr = L"Something has caused {AppName} error to occur and an error report has been generated.\r\n\r\nThe error report may contain confidential information from the program at the time the error occurred.\r\n\r\nClick the 'Send' button to send this error information to {CompanyShortName}.";
+			}
+		}
+		fTmpPtr = formatStr(tmpPtr, dHandle->params, dHandle->params_len);
 		SetWindowTextW(dHandle->staticMain, fTmpPtr);
 		free(fTmpPtr);
 	}
 
 	// Set the window caption text
-	tmpPtr = (wchar_t*)FlyTrapGetParamEx(idPtr->params, idPtr->params_len, L"FlyTrap_CrashAlertDialog_Title");
+	if(dHandle->report_mode == FLYTRAP_REPORTMODE_USERTRIGGER) {
+		tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_DEBUGREPORT_TITLE);
+		if(tmpPtr == NULL) {
+			tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_CRASHREPORT_TITLE);
+		}
+	} else {
+		tmpPtr = (wchar_t*)FlyTrapGetParamEx(dHandle->params, dHandle->params_len, FLYTRAP_PARAM_CRASHREPORT_TITLE);
+	}
 	if(tmpPtr == NULL) {
 		tmpPtr = L"Crash detected!";
 	}
-	fTmpPtr = formatStr(tmpPtr, idPtr->params, idPtr->params_len);
+	fTmpPtr = formatStr(tmpPtr, dHandle->params, dHandle->params_len);
 	SetWindowTextW(hWnd, fTmpPtr);
 	free(fTmpPtr);
 
@@ -716,7 +847,7 @@ INT_PTR CALLBACK FlyTrapCrashAlertDialogWndProc(HWND hDlg, UINT message, WPARAM 
 	LPFSCADHANDLE dHandle = (LPFSCADHANDLE)GetWindowLongPtr(hDlg, DWLP_USER);
 	switch(message) {
 		case WM_INITDIALOG:
-			InitFlyTrapCrashDialog(hDlg, (LPFLYTRAPCRASHALERTDIALOGINITDATA)lParam);
+			InitFlyTrapReportDialog(hDlg, (LPFLYTRAPCRASHALERTDIALOGINITDATA)lParam);
 			return((INT_PTR)TRUE);
 
 		case WM_COMMAND:
@@ -768,40 +899,8 @@ INT_PTR CALLBACK FlyTrapCrashAlertDialogWndProc(HWND hDlg, UINT message, WPARAM 
 	return((INT_PTR)FALSE);
 }
 
-int FlyTrapCrashAlert(void *parentWindowHandle, const wchar_t *reportUrl, const wchar_t *miniDumpFilename, const LPFLYTRAPPARAM params, const int params_len)
+int FlyTrapCrashAlert(void *parentWindowHandle, const wchar_t *reportUrl, const int report_mode, const wchar_t *dumpId, const wchar_t *miniDumpFilename, const LPFLYTRAPPARAM params, const int params_len)
 {
-	wchar_t *dumpPath = NULL;
-	wchar_t *dumpId = NULL;
-
-
-	if(miniDumpFilename != NULL) {
-		wchar_t *pathStr = wcsdup(miniDumpFilename);
-		wchar_t *pathStrSPtr = wcsrchr(pathStr, L'\\');
-		wchar_t *pathStrPtr = wcsrchr(pathStr, L'/');
-		if(pathStrSPtr > pathStrPtr) {
-			pathStrPtr = pathStrSPtr;
-		}
-
-		if(pathStrPtr != NULL) {
-			pathStrPtr[0] = L'\0';
-			if(pathStrPtr[1] != L'\0') {
-				pathStrPtr++;
-			} else {
-				pathStrPtr = NULL;
-			}
-		}
-
-		if(pathStrPtr != NULL) {
-			dumpPath = wcsdup(pathStr);
-			wchar_t *extPtr = wcsrchr(pathStrPtr, L'.');
-			if(extPtr != NULL) {
-				extPtr[0] = L'\0';
-			}
-			dumpId = wcsdup(pathStrPtr);
-		}
-		free(pathStr);
-	}
-
 	// display the dump info to the user and allow them to determine if they want to send a crash report
 	FLYTRAPCRASHALERTDIALOGINITDATA idData;
 	idData.dumpFileName = (wchar_t*)miniDumpFilename;
@@ -809,8 +908,8 @@ int FlyTrapCrashAlert(void *parentWindowHandle, const wchar_t *reportUrl, const 
 	idData.params = params;
 	idData.params_len = params_len;
 	idData.dumpId = dumpId;
-	idData.dumpDir = dumpPath;
 	idData.useTabControl = USE_TAB_CONTROL_FOR_REPORTLAYOUT;
+	idData.report_mode = report_mode;
 	LPDLGTEMPLATE dlgTemplate = CreateFSWin32CrashAlertDlgTemplate();
 	int dialogResult = DialogBoxIndirectParamW(fsgh_Instance, dlgTemplate, (HWND)parentWindowHandle, FlyTrapCrashAlertDialogWndProc, (LPARAM)&idData);
 	free(dlgTemplate);
@@ -824,10 +923,6 @@ int FlyTrapCrashAlert(void *parentWindowHandle, const wchar_t *reportUrl, const 
 			// anything else is an error, we're going to send the report anyway
 			wsprintf(buff, L"This application has crashed, however the error reporting dialog could not be displayed or failed(%u).  Would you like to send a crash report anyway?", dialogResult);
 			if(MessageBoxW((HWND)parentWindowHandle, buff, L"Application crash detected!", MB_OKCANCEL) != IDOK) {
-				if(dumpId != NULL)
-					free(dumpId);
-				if(dumpPath != NULL)
-					free(dumpPath);
 				return(-5);
 			}
 			break;
@@ -852,7 +947,7 @@ int FlyTrapCrashAlert(void *parentWindowHandle, const wchar_t *reportUrl, const 
 	wstring reportCode;
 
 	// determine if we need to use a checkpoint file and do so
-	wchar_t *tmpPtr = (wchar_t*)FlyTrapGetParamEx(params, params_len, L"FlyTrap_CheckpointSettings");
+	wchar_t *tmpPtr = (wchar_t*)FlyTrapGetParamEx(params, params_len, FLYTRAP_PARAM_CHECKPOINT_SETTINGS);
 	if(tmpPtr == NULL) {
 		tmpPtr = wcsdup(L"");
 	} else {
@@ -913,11 +1008,6 @@ int FlyTrapCrashAlert(void *parentWindowHandle, const wchar_t *reportUrl, const 
 			MessageBox((HWND)parentWindowHandle, buf, L"Unexpected response from report sender", MB_OK|MB_ICONHAND);
 			returnVal += -4;
 	}
-
-	if(dumpId != NULL)
-		free(dumpId);
-	if(dumpPath != NULL)
-		free(dumpPath);
 
 	return(returnVal);
 }

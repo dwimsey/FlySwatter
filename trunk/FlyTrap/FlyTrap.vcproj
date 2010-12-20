@@ -284,8 +284,8 @@
 					Name="VCCustomBuildTool"
 					Description="Generating version information ..."
 					CommandLine="$(InputPath)&#x0D;&#x0A;"
-					AdditionalDependencies="FlyTrap.h;FlyTrap.cpp;CrashAlert_Window.cpp;FlyTrap.rc;resource.h"
-					Outputs="FlyTrapVersion.h"
+					AdditionalDependencies=""
+					Outputs="$(ProjectDir)FlyTrapVersion.h"
 				/>
 			</FileConfiguration>
 			<FileConfiguration
@@ -294,9 +294,9 @@
 				<Tool
 					Name="VCCustomBuildTool"
 					Description="Generating version information ..."
-					CommandLine="$(InputPath)"
-					AdditionalDependencies="FlyTrap.h;FlyTrap.cpp;CrashAlert_Window.cpp;FlyTrap.rc;resource.h"
-					Outputs="FlyTrapVersion.h"
+					CommandLine="$(InputPath)&#x0D;&#x0A;"
+					AdditionalDependencies=""
+					Outputs="$(ProjectDir)FlyTrapVersion.h"
 				/>
 			</FileConfiguration>
 		</File>
