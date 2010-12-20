@@ -594,6 +594,7 @@ FLYTRAP_API const wchar_t * __stdcall FlyTrapGetParam(const wchar_t *name)
 	return(FlyTrapGetParamEx(lctx->params, lctx->params_len, name));
 }
 
+static int flytrap_in_exception = 0;
 FLYTRAP_API void __stdcall FlyTrapTriggerReport()
 {
 	if(lctx == NULL) {
@@ -603,6 +604,8 @@ FLYTRAP_API void __stdcall FlyTrapTriggerReport()
 		return;
 	}
 	lctx->handlerPtr->WriteMinidump();
+	// reset the global in exception marker so we handle exceptions in the future
+	flytrap_in_exception = 0;
 }
 
 bool FlyTrapExceptionFilter(void *ctx, EXCEPTION_POINTERS *exceptionInfo, MDRawAssertionInfo *assertionInfo)
@@ -620,7 +623,12 @@ bool FlyTrapExceptionFilter(void *ctx, EXCEPTION_POINTERS *exceptionInfo, MDRawA
 		return(false);
 	}
 
+	if(flytrap_in_exception > 0) {
+		// we don't filter our own exceptions at this time
+		return(false);
+	}
 	// we always call FlyTrap for now when we're enabled
+	flytrap_in_exception = 1;
 	return(true);
 }
 
@@ -629,33 +637,77 @@ typedef struct __FlyTrapOutOfProcessCallbackData {
 	const wchar_t *dump_path;
 	unsigned int pCount;
 	LPFLYTRAPPARAM params;
+	int report_mode;
 } FTOOPCDATA, *LPFTOOPCDATA;
 
 DWORD WINAPI FlyTrapOutOfProcessDumpCallbackThread(LPVOID iValue)
 {
 	LPFTOOPCDATA ftOopcData = (LPFTOOPCDATA)iValue;
 	if(ftOopcData != NULL) {
+		wchar_t *dpath = NULL;
+		wchar_t *dump_id = NULL;
 		if(ftOopcData->dump_path != NULL) {
-			FlyTrapCrashAlert(NULL, ftOopcData->serverContext->reportUrl, ftOopcData->dump_path, ftOopcData->params, ftOopcData->pCount);
-			_wunlink(ftOopcData->dump_path);
-			free((void*)ftOopcData->dump_path);
-		} else {
-			FlyTrapCrashAlert(NULL, ftOopcData->serverContext->reportUrl, NULL, ftOopcData->params, ftOopcData->pCount);
+			dpath = wcsdup(ftOopcData->dump_path);
+			dump_id = wcsrchr(dpath, '/');
+			wchar_t *did_end = NULL;
+#ifdef WIN32
+			did_end = wcsrchr(dpath, '\\');
+			if(did_end > dump_id) {
+				dump_id = did_end;
+			}
+#endif
+			if(dump_id != NULL) {
+				did_end = wcschr(dump_id, '.');
+				if(did_end != NULL) {
+					did_end[0] = L'\0';
+					dump_id++;
+				} else {
+					dump_id = NULL;
+				}
+			}
 		}
+		if(dump_id == NULL) {
+			// generate our own dump id
+			if(dpath != NULL) {
+				free(dpath);
+			}
+			dpath = wcsdup(L"NoDumpIdFound");
+			dump_id = dpath;
+		}
+
+		FlyTrapCrashAlert(NULL, ftOopcData->serverContext->reportUrl, ftOopcData->report_mode, dump_id, ftOopcData->dump_path, ftOopcData->params, ftOopcData->pCount);
+		if(ftOopcData->dump_path != NULL) {
+			// Unlink the dump file as it has been sent
+			_wunlink(ftOopcData->dump_path);
+			// free the memory for the dump file path
+			free((void*)ftOopcData->dump_path);
+		}
+
+		if(dpath != NULL) {
+			free(dpath);
+		}
+
+		// if we have parameters, we need to free them before we return as we're the final owner
 		if(ftOopcData->params != NULL) {
+			// loop through the parameters and free them
 			for(unsigned int i = 0; i < ftOopcData->pCount; i++) {
+				// free the parameter name, if it exists
 				if(ftOopcData->params[i].name != NULL) {
 					free(ftOopcData->params[i].name);
 				}
+				// free the parameter value, if it exists
 				if(ftOopcData->params[i].value != NULL) {
 					free(ftOopcData->params[i].value);
 				}
 			}
+			// free the parameter pointer container
 			free(ftOopcData->params);
 		}
+		// Update the server context to show that we're done and going away now
 		if(ftOopcData->serverContext != NULL) {
 			InterlockedDecrement(&ftOopcData->serverContext->windowsWaittingCount);
 		}
+		// free up the thread setup structure
 		free(ftOopcData);
 	}
 	return(0);
@@ -666,8 +718,26 @@ void FlyTrapOutOfProcessDumpCallback(void *dump_context, ClientInfo *client_info
 	LPFLYTRAPPARAM params = NULL;
 	LPFLYTRAPSERVERCONTEXT serverContext = (LPFLYTRAPSERVERCONTEXT)dump_context;
 
+	// this will be free'd by the thread we start
+	LPFTOOPCDATA ftOopcData = (LPFTOOPCDATA)malloc(sizeof(FTOOPCDATA));
+	if(ftOopcData == NULL) {
+		/// @TODO Handle this error in some way to let someone know it happened
+		return;
+	}
+	// Zero initialize the structure
+	memset(ftOopcData, 0, sizeof(FTOOPCDATA));
+
 	unsigned int pCount = 0;
 	if(client_info != NULL) {
+		EXCEPTION_POINTERS **exInfo = client_info->ex_info();
+		if(exInfo == NULL) {
+			// something isn't write, lets report it as a crash to be safe
+			ftOopcData->report_mode = FLYTRAP_REPORTMODE_CRASH;
+		} else {
+			// determine if the exception pointers point to an exception or if the request was user triggered
+			ftOopcData->report_mode = ((exInfo == NULL) ? FLYTRAP_REPORTMODE_USERTRIGGER : FLYTRAP_REPORTMODE_CRASH);
+		}
+
 		CustomClientInfo ccInfo = client_info->GetCustomInfo();
 		if(ccInfo.count > 0) {
 			pCount = ccInfo.count;
@@ -675,6 +745,9 @@ void FlyTrapOutOfProcessDumpCallback(void *dump_context, ClientInfo *client_info
 			params = (LPFLYTRAPPARAM)malloc(sizeof(FLYTRAPPARAM) * pCount);
 			if(params == NULL) {
 				/// @HACK Handle this error in some way to let someone know it happened
+
+				// free the thread parameters structure
+				free(ftOopcData);
 				return;
 			}
 			for(unsigned int i = 0; i < pCount; i++) {
@@ -692,15 +765,6 @@ void FlyTrapOutOfProcessDumpCallback(void *dump_context, ClientInfo *client_info
 		}
 	}
 
-	// this will be free'd by the thread we start
-	LPFTOOPCDATA ftOopcData = (LPFTOOPCDATA)malloc(sizeof(FTOOPCDATA));
-	if(ftOopcData == NULL) {
-		/// @TODO Handle this error in some way to let someone know it happened
-		if(params != NULL) {
-			free(params);
-		}
-		return;
-	}
 	ftOopcData->params = params;
 	ftOopcData->pCount = pCount;
 	ftOopcData->serverContext = serverContext;
@@ -709,50 +773,65 @@ void FlyTrapOutOfProcessDumpCallback(void *dump_context, ClientInfo *client_info
 		ftOopcData->dump_path = wcsdup(dump_path->c_str());
 		if(ftOopcData->dump_path == NULL) {
 			/// @TODO Handle this error in some way to let someone know it happened
+
+			// free the parameters we've duplicated
 			if(ftOopcData->params != NULL) {
 				for(unsigned int i = 0; i < ftOopcData->pCount; i++) {
+					// free the parameter name, if it exists
 					if(ftOopcData->params[i].name != NULL) {
 						free(ftOopcData->params[i].name);
 					}
+					// free the parameter value, if it exists
 					if(ftOopcData->params[i].value != NULL) {
 						free(ftOopcData->params[i].value);
 					}
 				}
+				// free the parameter pointer container
 				free(ftOopcData->params);
 			}
+			// free the thread parameters structure
 			free(ftOopcData);
 			return;
 		}
 	} else {
+		// no path to set, set parameter to NULL
 		ftOopcData->dump_path = NULL;
 	}
 
 	HANDLE ftcbThread;
 	DWORD ftcbThreadId;
+
+	// Add our reference in the server context so we aren't forgotten
 	InterlockedIncrement(&ftOopcData->serverContext->windowsWaittingCount);
 	ftcbThread = CreateThread(NULL, 0, FlyTrapOutOfProcessDumpCallbackThread, ftOopcData, 0, &ftcbThreadId);
 	if(ftcbThread == NULL) {
 		// the thread wasn't started, we'll need to cleanup ourselves
+		// this window is certainly no longer waiting
 		InterlockedDecrement(&ftOopcData->serverContext->windowsWaittingCount);
 		if(ftOopcData->params != NULL) {
+			// free the parameter copies
 			for(unsigned int i = 0; i < ftOopcData->pCount; i++) {
+				// free the parameter name, if it exists
 				if(ftOopcData->params[i].name != NULL) {
 					free(ftOopcData->params[i].name);
 				}
+				// free the parameter value, if it exists
 				if(ftOopcData->params[i].value != NULL) {
 					free(ftOopcData->params[i].value);
 				}
 			}
+			// free the parameter pointer container
 			free(ftOopcData->params);
 		}
 		if(ftOopcData->dump_path != NULL) {
+			// free the dump file path string memory
 			free((void*)ftOopcData->dump_path);
 		}
+		// free the thread parameters structure
 		free(ftOopcData);
 		return;
 	}
 	CloseHandle(ftcbThread);
-
 }
 
 bool FlyTrapInProcessDumpCallback(const wchar_t *dumpPath, const wchar_t *dumpId, void *mctx, EXCEPTION_POINTERS *exceptionInfo, MDRawAssertionInfo *assertionInfo, bool dumpSucceeded)
@@ -771,16 +850,16 @@ bool FlyTrapInProcessDumpCallback(const wchar_t *dumpPath, const wchar_t *dumpId
 	wchar_t miniDumpFilename[1025];
 	if(dumpSucceeded == true) {
 		if(dumpPath == NULL || dumpId == NULL) {
-			FlyTrapCrashAlert(NULL, ctx->reportUrl, NULL, ctx->params, ctx->params_len);
+			FlyTrapCrashAlert(NULL, ctx->reportUrl, (exceptionInfo == NULL ? FLYTRAP_REPORTMODE_USERTRIGGER : FLYTRAP_REPORTMODE_CRASH), dumpId, NULL, ctx->params, ctx->params_len);
 		} else {
 			wsprintf(miniDumpFilename, L"%s\\%s.dmp", dumpPath, dumpId);
 			miniDumpFilename[1023] = L'\0';
-			FlyTrapCrashAlert(NULL, ctx->reportUrl, miniDumpFilename, ctx->params, ctx->params_len);
+			FlyTrapCrashAlert(NULL, ctx->reportUrl, (exceptionInfo == NULL ? FLYTRAP_REPORTMODE_USERTRIGGER : FLYTRAP_REPORTMODE_CRASH), dumpId, miniDumpFilename, ctx->params, ctx->params_len);
 			// the minidump should already be gone, but we're going to remove it again anyway to be safe
 			_wunlink(miniDumpFilename);
 		}
 	} else {
-		FlyTrapCrashAlert(NULL, ctx->reportUrl, NULL, ctx->params, ctx->params_len);
+		FlyTrapCrashAlert(NULL, ctx->reportUrl, (exceptionInfo == NULL ? FLYTRAP_REPORTMODE_USERTRIGGER : FLYTRAP_REPORTMODE_CRASH), dumpId, NULL, ctx->params, ctx->params_len);
 	}
 
 	return(true);
@@ -853,7 +932,7 @@ wchar_t *DumpRegistryKey(wchar_t *regPath)
 	for(i = 0; ; i++) {
 		vNameSiz = 16384;
 		dataSiz = 0;
-		r = RegEnumValue(bKey, i, vName, &vNameSiz, NULL, &type, NULL, &dataSiz);
+		r = RegEnumValueW(bKey, i, vName, &vNameSiz, NULL, &type, NULL, &dataSiz);
 		if(r != ERROR_SUCCESS) {
 			if(r != ERROR_NO_MORE_ITEMS) {
 				// TODO: Do something with this error
@@ -995,10 +1074,18 @@ map<wstring, wstring> *CreateParamMap(const LPFLYTRAPPARAM params, const int par
 	if(paramsStr == NULL) {
 		return(NULL);
 	}
-	(*paramsStr)[L"FlyTrapVersion"] = _T(FLYTRAP_STRPRODUCTVERSION);
-	(*paramsStr)[L"FlyTrapBuildFlags"] = _T(FLYTRAP_STRSPECIALBUILD);
-	(*paramsStr)[L"FlyTrapCrashId"] = dumpId;
-	(*paramsStr)[L"FlyTrapReportURL"] = reportUrl;
+	(*paramsStr)[FLYTRAP_PARAM_FLYTRAPVERSION] = _T(FLYTRAP_STRPRODUCTVERSION);
+	(*paramsStr)[FLYTRAP_PARAM_FLYTRAPBUILDFLAGS] = _T(FLYTRAP_STRSPECIALBUILD);
+	if(dumpId == NULL) {
+		(*paramsStr)[FLYTRAP_PARAM_CRASHID] = L"";
+	} else {
+		(*paramsStr)[FLYTRAP_PARAM_CRASHID] = dumpId;
+	}
+	if(reportUrl == NULL) {
+		(*paramsStr)[FLYTRAP_PARAM_REPORTURL] = L"";
+	} else {
+		(*paramsStr)[FLYTRAP_PARAM_REPORTURL] = reportUrl;
+	}
 
 	FILE *fp;
 	int iCount;
@@ -1025,10 +1112,7 @@ map<wstring, wstring> *CreateParamMap(const LPFLYTRAPPARAM params, const int par
 			// blank entry, just skip it.  We could probably break out of the loop but we won't do that since
 			// we may have a way to delete entries in the future
 			continue;
-		} else if(wcsncmp(params[i].name, L"FlyTrap_CrashAlertDialog_", wcslen(L"FlyTrap_CrashAlertDialog_")) == 0) {
-			// Parameters that start with FlyTrap_CrashAlertDialog_ are for use by the dialog display only
-			continue;
-		} else if(wcscmp(params[i].name, L"FlyTrap_AttachFiles") == 0) {
+		} else if(wcscmp(params[i].name, FLYTRAP_PARAM_ATTACHFILES_PARAM L"s") == 0) {
 			// Add the files specified
 			if(params[i].value != NULL) {
 				if(wcslen(params[i].value)>0) {
@@ -1088,7 +1172,7 @@ map<wstring, wstring> *CreateParamMap(const LPFLYTRAPPARAM params, const int par
 						} else {
 							outBuf = wcsdup(L"File name missing;-1;");
 						}
-						wsprintf(nameBuf, L"FlyTrap_AttachFiles_%d", iCount);
+						wsprintf(nameBuf, FLYTRAP_PARAM_ATTACHFILES_PARAM L"_%d", iCount);
 						// set the map value to our base64 encoded file data
 						(*paramsStr)[nameBuf] = outBuf;
 						// outBuf is no longer needed
@@ -1146,7 +1230,7 @@ map<wstring, wstring> *CreateParamMap(const LPFLYTRAPPARAM params, const int par
 						} else {
 							outBuf = wcsdup(L"File name missing;-1;");
 						}
-						wsprintf(nameBuf, L"FlyTrap_AttachFiles_%d", iCount);
+						wsprintf(nameBuf, FLYTRAP_PARAM_ATTACHFILES_PARAM L"_%d", iCount);
 						// set the map value to our base64 encoded file data
 						(*paramsStr)[nameBuf] = outBuf;
 						// outBuf is no longer needed
@@ -1156,7 +1240,7 @@ map<wstring, wstring> *CreateParamMap(const LPFLYTRAPPARAM params, const int par
 					free(tfnameBuf);
 				}
 			}
-		} else if(wcscmp(params[i].name, L"FlyTrap_AttachRegKeys") == 0) {
+		} else if(wcscmp(params[i].name, FLYTRAP_PARAM_ATTACHREGKEY_PARAM L"s") == 0) {
 			// Dump the specified registry keys and include them
 			if(params[i].value != NULL) {
 				if(wcslen(params[i].value)>0) {
@@ -1180,7 +1264,7 @@ map<wstring, wstring> *CreateParamMap(const LPFLYTRAPPARAM params, const int par
 								outBuf = mprintf(L"%s;Could not open registry key", fnameBuf);
 							}
 						}
-						wsprintf(nameBuf, L"FlyTrap_AttachRegKeys_%d", iCount);
+						wsprintf(nameBuf, FLYTRAP_PARAM_ATTACHREGKEY_PARAM L"_%d", iCount);
 						// set the map value to our base64 encoded data
 						(*paramsStr)[nameBuf] = outBuf;
 						// outBuf is no longer needed
@@ -1203,7 +1287,7 @@ map<wstring, wstring> *CreateParamMap(const LPFLYTRAPPARAM params, const int par
 								outBuf = mprintf(L"%s;Could not open registry key", fnameBuf);
 							}
 						}
-						wsprintf(nameBuf, L"FlyTrap_AttachRegKeys_%d", iCount);
+						wsprintf(nameBuf, FLYTRAP_PARAM_ATTACHREGKEY_PARAM L"_%d", iCount);
 						// set the map value to our base64 encoded data
 						(*paramsStr)[nameBuf] = outBuf;
 						// outBuf is no longer needed
