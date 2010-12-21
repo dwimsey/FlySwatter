@@ -45,7 +45,7 @@ if($_GET['dfile'] != null) {
 		exit;
 	} else if(($_GET['type'] == 'xml') || ($_GET['type'] == 'html') ||  ($_GET['type'] == 'json')) {
 		$cache_filename = $dumpid . '_' . $dfile . '.xml';
-		$cache_file = $cache_dir . '/md/' . $cache_filename;
+		$cache_file = $cache_minidump_dir . '/' . $cache_filename;
 		$outStr = '';
 		$minidump = NULL;
 		if($cache_minidump_xml == 1) {
