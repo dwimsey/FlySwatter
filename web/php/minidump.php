@@ -5,6 +5,7 @@ require_once('classes/minidump.php');
 global $cache_minidump_text;
 global $cache_minidump_raw;
 global $cache_minidump_xml;
+global $cache_dir_mask;
 
 $dumpid = $_GET['dumpid'];
 $fn = $report_dir . '/' . $dumpid . '.xml';
@@ -67,6 +68,10 @@ if($_GET['dfile'] != null) {
 			$minidump->ReadMinidumpData($dumpid, 0, $binData);	
 			$outStr = $minidump->GetXML();
 			if($cache_minidump_xml == 1) {
+				if(!file_exists($cache_minidump_dir)) {
+					mkdir($cache_minidump_dir, $cache_dir_mask, true);
+				}
+
 				$fp = fopen($cache_file, 'w');
 				if($fp != false) {
 					fwrite($fp, $outStr);

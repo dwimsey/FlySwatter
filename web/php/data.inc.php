@@ -39,8 +39,9 @@ class ReportInfo {
 	
 	function LoadFile($filename) {
 		global $cache_dir;
-		global $report_dir;
 		global $cache_minidump_xml;
+		global $cache_minidump_dir;
+		global $cache_dir_mask;
 
 		if(!file_exists($filename)) {
 			return(false);
@@ -77,7 +78,7 @@ class ReportInfo {
 		$cache_file = NULL;
 		if($cache_minidump_xml == 1) {
 			$cache_filename = $this->DumpId . '_0.xml';
-			$cache_file = $cache_dir . '/md/' . $cache_filename;
+			$cache_file = $cache_minidump_dir . '/' . $cache_filename;
 			if(file_exists($cache_file)) {
 				$fp = fopen($cache_file, 'r');
 				if($fp) {
@@ -100,6 +101,9 @@ class ReportInfo {
 			$minidump->ReadMinidumpData($this->DumpId, 0, $binData);
 	
 			if($cache_minidump_xml == 1) {
+				if(!file_exists($cache_minidump_dir)) {
+					mkdir($cache_minidump_dir, $cache_dir_mask, true);
+				}
 				$outStr = $minidump->GetXML();
 				$fp =fopen($cache_file, "w");
 				if($fp != false) {
