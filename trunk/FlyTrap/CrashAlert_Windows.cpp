@@ -36,6 +36,10 @@
  */
 
 #include "stdafx.h"
+#include "shellapi.h"
+
+TCHAR *mprintf(const TCHAR *format, ...);
+
 #define USE_TAB_CONTROL_FOR_REPORTLAYOUT 1
 static HINSTANCE fsgh_Instance = NULL;
 
@@ -899,31 +903,71 @@ INT_PTR CALLBACK FlyTrapCrashAlertDialogWndProc(HWND hDlg, UINT message, WPARAM 
 	return((INT_PTR)FALSE);
 }
 
+int checkUrl(wchar_t *cPtr)
+{
+	while(cPtr[0] != NULL) {
+		if((cPtr[0] == 0x21) || ((cPtr[0] >= 0x23) && (cPtr[0] <= 0x26))) {
+			cPtr++;
+			continue;
+		}
+		if(((cPtr[0] >= 0x2a) && (cPtr[0] <= 0x3a)) || (cPtr[0] == 0x3d)) {
+			cPtr++;
+			continue;
+		}
+		if(((cPtr[0] >= 0x3f) && (cPtr[0] <= 0x5a)) || (cPtr[0] == 0x5f)) {
+			cPtr++;
+			continue;
+		}
+		if(((cPtr[0] >= 0x61) && (cPtr[0] <= 0x7a)) || (cPtr[0] == 0x7e)) {
+			cPtr++;
+			continue;
+		}
+		return(0);
+	}
+	return(1);
+}
+
+#define FLYTRAP_CRASHALERT_RESPONSE_TEXT_BUFFER_SIZE	(8192*8)
 int FlyTrapCrashAlert(void *parentWindowHandle, const wchar_t *reportUrl, const int report_mode, const wchar_t *dumpId, const wchar_t *miniDumpFilename, const LPFLYTRAPPARAM params, const int params_len)
 {
 	// display the dump info to the user and allow them to determine if they want to send a crash report
-	FLYTRAPCRASHALERTDIALOGINITDATA idData;
-	idData.dumpFileName = (wchar_t*)miniDumpFilename;
-	idData.reportUrl = (wchar_t*)reportUrl;
-	idData.params = params;
-	idData.params_len = params_len;
-	idData.dumpId = dumpId;
-	idData.useTabControl = USE_TAB_CONTROL_FOR_REPORTLAYOUT;
-	idData.report_mode = report_mode;
+	LPFLYTRAPCRASHALERTDIALOGINITDATA idData = (LPFLYTRAPCRASHALERTDIALOGINITDATA)calloc(1, sizeof(FLYTRAPCRASHALERTDIALOGINITDATA));
+	if(idData == NULL) {
+		return(FLYTRAP_ERROR_OUTOFMEMORY);
+	}
+	idData->dumpFileName = (wchar_t*)miniDumpFilename;
+	idData->reportUrl = (wchar_t*)reportUrl;
+	idData->params = params;
+	idData->params_len = params_len;
+	idData->dumpId = dumpId;
+	idData->useTabControl = USE_TAB_CONTROL_FOR_REPORTLAYOUT;
+	idData->report_mode = report_mode;
 	LPDLGTEMPLATE dlgTemplate = CreateFSWin32CrashAlertDlgTemplate();
-	int dialogResult = DialogBoxIndirectParamW(fsgh_Instance, dlgTemplate, (HWND)parentWindowHandle, FlyTrapCrashAlertDialogWndProc, (LPARAM)&idData);
+	if(dlgTemplate == NULL) {
+		free(idData);
+		return(-5);
+	}
+	int dialogResult = DialogBoxIndirectParamW(fsgh_Instance, dlgTemplate, (HWND)parentWindowHandle, FlyTrapCrashAlertDialogWndProc, (LPARAM)idData);
 	free(dlgTemplate);
-	wchar_t buff[256];
+	free(idData);
+
+	wchar_t *buf = (wchar_t*)calloc(FLYTRAP_CRASHALERT_RESPONSE_TEXT_BUFFER_SIZE+1, sizeof(wchar_t));
+	if(buf == NULL) {
+		return(FLYTRAP_ERROR_OUTOFMEMORY);
+	}
+
 	switch(dialogResult) {
 		case 1: // Send the report
 			break;
 		case 2: // don't send a report
+			free(buf);
 			return(0);
 		default:
 			// anything else is an error, we're going to send the report anyway
-			wsprintf(buff, L"This application has crashed, however the error reporting dialog could not be displayed or failed(%u).  Would you like to send a crash report anyway?", dialogResult);
-			if(MessageBoxW((HWND)parentWindowHandle, buff, L"Application crash detected!", MB_OKCANCEL) != IDOK) {
-				return(-5);
+			wsprintf(buf, L"This application has crashed, however the error reporting dialog could not be created (%u).  Would you like to send a crash report anyway?", dialogResult);
+			if(MessageBoxW((HWND)parentWindowHandle, buf, L"Application crash detected!", MB_OKCANCEL) != IDOK) {
+				free(buf);
+				return(-6);
 			}
 			break;
 	}
@@ -982,32 +1026,91 @@ int FlyTrapCrashAlert(void *parentWindowHandle, const wchar_t *reportUrl, const 
 	if(dialogResult<1 || dialogResult>2) {
 		returnVal = -10;
 	}
-	wchar_t buf[1025];
+
+	wchar_t *serverResponse = (wchar_t*)reportCode.c_str();
 	switch(rs) {
 		case RESULT_FAILED:		// Failed to communicate with the server; try later.
-			_sntprintf(buf, 1024, L"Upload failed: %s", reportCode.c_str());
+			_sntprintf(buf, (FLYTRAP_CRASHALERT_RESPONSE_TEXT_BUFFER_SIZE-1), L"Upload failed: %s", serverResponse);
+			buf[(FLYTRAP_CRASHALERT_RESPONSE_TEXT_BUFFER_SIZE-1)] = L'\0';
 			MessageBox((HWND)parentWindowHandle, buf, L"Crash report could not be sent", MB_OK|MB_ICONHAND);
 			returnVal += -1;
 			break;
 		case RESULT_REJECTED:	// Successfully sent the crash report, but the server rejected it; don't resend this report.
-			_sntprintf(buf, 1024, L"Upload completed, but rejected by server: (No Reason): %s", reportCode.c_str());
+			_sntprintf(buf, (FLYTRAP_CRASHALERT_RESPONSE_TEXT_BUFFER_SIZE-1), L"Upload completed, but rejected by server: (No Reason): %s", serverResponse);
+			buf[(FLYTRAP_CRASHALERT_RESPONSE_TEXT_BUFFER_SIZE-1)] = L'\0';
 			MessageBox((HWND)parentWindowHandle, buf, L"Crash report was not accepted", MB_OK|MB_ICONHAND);
 			break;
 		case RESULT_SUCCEEDED:	// The server accepted the crash report.
-			_sntprintf(buf, 1024, L"Crash report sent: %s", reportCode.c_str());
-			returnVal += 1;
-			MessageBox((HWND)parentWindowHandle, buf, L"Crash report accepted", MB_OK|MB_ICONHAND);
+			if(wcsncmp(serverResponse, L"REPORTURL: ", 11) == 0) {
+				// we have the server giving us a URL to display more info, offer the user the option to do so
+				wchar_t *reportUrl = &serverResponse[11];
+				wchar_t *reportUrlEnd = reportUrl;
+				int i = 0;
+				// the url is everthing up until the next whitespace, everything after that is the message
+				while(reportUrlEnd != NULL) {
+					if(iswspace(reportUrlEnd[i])) {
+						break;
+					}
+					i++;
+				}
+				reportUrlEnd += i;
+				wchar_t *tptr = wcsdup(reportUrl);
+				tptr[(reportUrlEnd-reportUrl)]= '\0';
+				wcscpy(buf, L"Crash report sent: ");
+				wcsncpy(buf, &reportUrlEnd[1], (FLYTRAP_CRASHALERT_RESPONSE_TEXT_BUFFER_SIZE-1));
+				buf[(FLYTRAP_CRASHALERT_RESPONSE_TEXT_BUFFER_SIZE-1)] = L'\0';
+
+				returnVal += 1;
+
+				int isBadUrl = (checkUrl(tptr) == 1 ? 0 : 1);
+				if((isBadUrl == 0) && ((wcsncmp(serverResponse, L"REPORTURL: http://", 18) == 0) || (wcsncmp(serverResponse, L"REPORTURL: https://", 19) == 0) || (wcsncmp(serverResponse, L"REPORTURL: mailto:", 18) == 0))) {
+					wchar_t *msgPtr = mprintf(L"More information is available at the following link:\r\n\r\n%s\r\n\t\nNotes:\r\n%s\r\n\r\nClick Yes to open this link.\r\nClick No to copy this link to the clipboard only.\r\nClick cancel to continue without any further action.", tptr, buf);
+					DWORD dlgRes = MessageBox((HWND)parentWindowHandle, msgPtr, L"Crash report accepted: More Information", MB_YESNOCANCEL|MB_ICONHAND);
+					free(msgPtr);
+					switch(dlgRes) {
+						case IDYES:
+							{
+								HINSTANCE r = ShellExecute(NULL, L"open", tptr, NULL, NULL, SW_SHOWNORMAL);
+							}
+							break;
+						case IDNO:
+						case IDCANCEL:
+						default:
+							break;
+					}
+				} else {
+					wchar_t *msgPtr = mprintf(L"The server provided a link for more information, but it contains unsafe characters and will not be opened.\r\n\r\nLink:\r\n%s\r\n\r\nNotes:\r\n%s\r\n\r\nWould you like to copy this link to the clipboard?\r\n\r\nClick Yes to copy this link to the clipboard.\r\nClick No to continue without any further action.", tptr, buf);
+					DWORD dlgRes = MessageBox((HWND)parentWindowHandle, msgPtr, L"Crash report accepted: More Information", MB_YESNO|MB_ICONHAND);
+					free(msgPtr);
+					switch(dlgRes) {
+						case IDYES:
+							{
+							}
+							break;
+						case IDNO:
+						default:
+							break;
+					}
+				}
+				free(tptr);
+			} else {
+				_sntprintf(buf, (FLYTRAP_CRASHALERT_RESPONSE_TEXT_BUFFER_SIZE-1), L"Crash report sent: %s", serverResponse);
+				returnVal += 1;
+				MessageBox((HWND)parentWindowHandle, buf, L"Crash report accepted", MB_OK|MB_ICONHAND);
+			}
 			break;
 		case RESULT_THROTTLED:	// No attempt was made to send the crash report, because we exceeded the maximum reports per day.
-			_sntprintf(buf, 1024, L"You have already sent %d reports today, no more reports will be accepted until tomorrow.", cs.max_reports_per_day());
+			_sntprintf(buf, (FLYTRAP_CRASHALERT_RESPONSE_TEXT_BUFFER_SIZE-1), L"You have already sent %d reports today, no more reports will be accepted until tomorrow.", cs.max_reports_per_day());
+			buf[(FLYTRAP_CRASHALERT_RESPONSE_TEXT_BUFFER_SIZE-1)] = L'\0';
 			MessageBox((HWND)parentWindowHandle, buf, L"Too many reports sent for today", MB_OK|MB_ICONHAND);
 			returnVal += -3;
 			break;
 		default:
-			_sntprintf(buf, 1024, L"Report Result: %u: %s", rs, reportCode.c_str());
+			_sntprintf(buf, (FLYTRAP_CRASHALERT_RESPONSE_TEXT_BUFFER_SIZE-1), L"Report Result: %u: %s", rs, reportCode.c_str());
+			buf[(FLYTRAP_CRASHALERT_RESPONSE_TEXT_BUFFER_SIZE-1)] = L'\0';
 			MessageBox((HWND)parentWindowHandle, buf, L"Unexpected response from report sender", MB_OK|MB_ICONHAND);
 			returnVal += -4;
 	}
-
+	free(buf);
 	return(returnVal);
 }
