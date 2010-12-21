@@ -5,6 +5,7 @@ require_once('classes/minidump.php');
 global $cache_minidump_text;
 global $cache_minidump_raw;
 global $cache_minidump_xml;
+global $cache_minidump_dir;
 global $cache_dir_mask;
 
 $dumpid = $_GET['dumpid'];
