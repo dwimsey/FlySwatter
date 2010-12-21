@@ -30,8 +30,12 @@ void DoManualReport(void *windowObject)
 	FlyTrapTriggerReport();
 }
 
+#ifdef DEBUG
 #define REPORT_URL	L"http://10.27.1.242/~dwimsey/flyswatter/sendreport.php"
 //#define REPORT_URL	L"http://192.168.128.239/~dwimsey/flyswatter/sendreport.php"
+#else
+#define REPORT_URL	L"http://support.rtsz.com/flyswatter/sendreport.php"
+#endif
 CCrashTestDummyApp::CCrashTestDummyApp()
 {
 	int rVal;
