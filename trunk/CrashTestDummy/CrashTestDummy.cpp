@@ -55,7 +55,7 @@ CCrashTestDummyApp::CCrashTestDummyApp()
 	}
 	// Free memory allocated for CommandLineToArgvW arguments.
 	LocalFree(szArglist);
-	if(inProcServer != 1) {
+	if(inProcServer == 1) {
 		// Use in process exception handling
 		FLYTRAPINITCLIENT(rVal, FlyTrap, L"%APPDATA%\\CrashTestDummy", REPORT_URL, NULL, L"FlyTrap.dll");
 	} else {
