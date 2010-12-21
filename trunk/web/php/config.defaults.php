@@ -40,9 +40,6 @@ $use_browser_xslt = true;
 global $stackwalker_path;
 $stackwalker_path = "${scripts_dir}/bin/minidump_stackwalk";
 
-global $symbols_dir;
-$symbols_dir = "${scripts_dir}/symbols";
-
 global $report_url_sendcomplete;
 $report_url_sendcomplete = 'http://localhost/flyswatter/reportsummary.php?dumpid=';
 
