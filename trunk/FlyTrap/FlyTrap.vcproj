@@ -90,6 +90,8 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
+				Description="Uploading symbols ..."
+				CommandLine="symupload.exe $(TargetPath) http://10.27.1.242/~dwimsey/flyswatter/symupload.php"
 			/>
 		</Configuration>
 		<Configuration
@@ -168,6 +170,8 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
+				Description="Uploading symbols ..."
+				CommandLine="symupload.exe $(TargetPath) http://support.rtsz.com/flyswatter/symupload.php"
 			/>
 		</Configuration>
 	</Configurations>
