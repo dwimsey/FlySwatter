@@ -329,11 +329,13 @@ class MinidumpInfo {
 
 
 function getMinidumpStackwalkFile($dumpid, $dfile, $binData, $wantsText) {
-	global $cache_dir;
+	global $cache_minidump_dir;
 	global $cache_minidump_text;
 	global $cache_minidump_raw;
 	global $cache_minidump_xml;
 	global $stackwalker_path;
+	global $symbols_dir;
+	global $cache_dir_mask;
 
 	$should_cache = false;
 	if($wantsText) {
@@ -349,6 +351,7 @@ function getMinidumpStackwalkFile($dumpid, $dfile, $binData, $wantsText) {
 	$outStr = '';
 	$minidump = NULL;
 	$cache_file = NULL;
+
 	if($should_cache) {
 		$cache_filename = $dumpid . '_' . $dfile;
 		if($wantsText) {
@@ -356,7 +359,7 @@ function getMinidumpStackwalkFile($dumpid, $dfile, $binData, $wantsText) {
 		} else {
 			$cache_filename .= '.raw';
 		}
-		$cache_file = $cache_dir . '/md/' . $cache_filename;
+		$cache_file = $cache_minidump_dir . '/' . $cache_filename;
 		if(file_exists($cache_file)) {
 			$fp = fopen($cache_file, 'r');
 			if($fp) {
@@ -376,10 +379,11 @@ function getMinidumpStackwalkFile($dumpid, $dfile, $binData, $wantsText) {
 	fclose($handle);
 
 	if($wantsText) {
-		$cmdpath = "${stackwalker_path} ${tmpfname} ${symbols_dir}";
+		$cmdpath = "${stackwalker_path}    ${tmpfname} ${symbols_dir}";
 	} else {
 		$cmdpath = "${stackwalker_path} -m ${tmpfname} ${symbols_dir}";
 	}
+
 	exec(escapeshellcmd($cmdpath), &$output);
 	header('Content-Type: text/plain');
 	$iMax = count($output);
@@ -390,6 +394,10 @@ function getMinidumpStackwalkFile($dumpid, $dfile, $binData, $wantsText) {
 
 	$outStr = '';
 	if($should_cache) {
+		if(!file_exists($cache_minidump_dir)) {
+			mkdir($cache_minidump_dir, $cache_dir_mask, true);
+		}
+
 		$fp = fopen($cache_file, 'w');
 		if($fp != false) {
 			for($i = 0; $i < $iMax; $i++) {

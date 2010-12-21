@@ -10,11 +10,20 @@ $private_dir = "${scripts_dir}";
 global $report_dir;
 $report_dir = "${private_dir}/data";
 
+global $report_dir_mask;
+$report_dir_mask = 0750;
+
 global $symbols_dir;
 $symbols_dir = "${private_dir}/symbols";
 
+global $symbol_dir_mask;
+$symbol_dir_mask = 0750;
+
 global $cache_enabled;
 $cache_enabled = 1;
+
+global $cache_dir_mask;
+$cache_dir_mask = 0750;
 
 global $cache_dir;
 $cache_dir = "${private_dir}/cache";

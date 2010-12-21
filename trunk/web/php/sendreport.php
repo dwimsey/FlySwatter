@@ -117,6 +117,10 @@ if($fscid == null) {
 	$fscid = "cd-no-fscid-" . rand_str(10);
 }
 
+if(!file_exists($report_dir)) {
+	mkdir($report_dir, $report_dir_mask, true);
+}
+
 $outputFilename = $report_dir . '/' . $fscid . ".xml";
 $fp = @fopen($outputFilename, 'w');
 if(!$fp) {
