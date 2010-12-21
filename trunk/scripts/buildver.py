@@ -184,7 +184,7 @@ if os.path.exists(rcs_workdir):
 	try:
 		cvs_cur_buildcount = int(svnversion_output)
 	except Exception, ex:
-		print "This does not appear to be a clean revision, generating psuedo version information ..."
+		print "This does not appear to be a clean revision, generating pseudo version information ..."
 		base_rev = 0
 		cur_rev = ""
 		cur_flags = ""

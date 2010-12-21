@@ -301,21 +301,6 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath=".\FlyTrap.doxygen"
-			>
-			<FileConfiguration
-				Name="Debug|Win32"
-				>
-				<Tool
-					Name="VCCustomBuildTool"
-					Description="Compiling documentation ..."
-					CommandLine="doxygen $(InputPath)&#x0D;&#x0A;"
-					AdditionalDependencies="FlyTrap.h FlyTrap.cpp"
-					Outputs="z:\docs\index.html"
-				/>
-			</FileConfiguration>
-		</File>
-		<File
 			RelativePath=".\pages.doxy"
 			>
 		</File>

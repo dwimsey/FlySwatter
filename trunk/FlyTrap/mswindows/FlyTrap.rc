@@ -73,7 +73,7 @@ BEGIN
             VALUE "FileDescription", "FlyTrap Error Reporting Library"
             VALUE "FileVersion", FLYTRAP_STRFILEVERSION
 			VALUE "BuildFlags", FLYTRAP_STRSPECIALBUILD
-            VALUE "InternalName", "FlyTrapDLL"
+            VALUE "InternalName", "FlyTrap.dll"
             VALUE "LegalCopyright", "Copyright (C) 2003-2010, David Wimsey"
             VALUE "OriginalFilename", "FlyTrap.dll"
             VALUE "ProductName", "FlySwatter Error Reporting System"

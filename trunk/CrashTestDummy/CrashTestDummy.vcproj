@@ -233,6 +233,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\fsctd_version.h"
+				>
+			</File>
+			<File
 				RelativePath=".\Resource.h"
 				>
 			</File>
@@ -263,6 +267,30 @@
 				>
 			</File>
 		</Filter>
+		<File
+			RelativePath="..\scripts\buildver.py"
+			>
+			<FileConfiguration
+				Name="Debug|Win32"
+				>
+				<Tool
+					Name="VCCustomBuildTool"
+					Description="Generating version information ..."
+					CommandLine="$(InputPath)"
+					Outputs="$(ProjectDir)FSCTD_Version.h"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Release|Win32"
+				>
+				<Tool
+					Name="VCCustomBuildTool"
+					Description="Generating version information ..."
+					CommandLine="$(InputPath)"
+					Outputs="$(ProjectDir)FSCTD_Version.h"
+				/>
+			</FileConfiguration>
+		</File>
 		<File
 			RelativePath=".\ReadMe.txt"
 			>

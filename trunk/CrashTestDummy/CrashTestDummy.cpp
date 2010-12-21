@@ -5,7 +5,7 @@
 #include "CrashTestDummy.h"
 #include "CrashTestDummyDlg.h"
 #include "../FlyTrap/FlyTrapVersion.h"
-
+#include "fsctd_version.h"
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -69,9 +69,9 @@ CCrashTestDummyApp::CCrashTestDummyApp()
 	FlyTrapSetParam(L"CompanyLegalName", L"Research Triangle Software, Inc.");
 	FlyTrapSetParam(L"AppName", L"CrashTest Dummy");
 	FlyTrapSetParam(L"AppGuid", L"EE6EADBF-79A6-4e24-B5D0-6D14945DDA17");
-	FlyTrapSetParam(L"AppVersion", L"0.1.2.4");
+	FlyTrapSetParam(L"AppVersion", _T(FSCTD_STRFILEVERSION));
 	wchar_t buf[30];
-	wsprintf((LPWSTR)&buf, L"%d", FLYTRAP_VERSION_BUILD);
+	wsprintf((LPWSTR)&buf, L"%d", FSCTD_VERSION_BUILD);
 	FlyTrapSetParam(L"AppBuildId", (LPWSTR)&buf);
 	FlyTrapSetParam(L"ProductName", L"FlySwatter");
 	FlyTrapSetParam(L"ProductGuid", L"4225E489-0DF5-4673-B854-65D55997EDBC");
