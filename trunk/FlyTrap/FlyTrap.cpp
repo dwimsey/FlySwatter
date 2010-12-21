@@ -1067,6 +1067,11 @@ void DeleteParamMap(map<wstring, wstring> *oldMap)
 	delete(oldMap);
 }
 
+// This value must be such that if multipled by 4, then divided by 3 the result is a whole number.
+// The value of 3072 (3k) results in a 4096 (4k) block with no dangling characters when base64blockencode
+// is called.
+#define FLYTRAP_FILEREAD_BUFSIZE	3072
+
 // creates a map<wstring, wstring> suitable for submission using the breakpad CrashReportSender.SendReport method
 map<wstring, wstring> *CreateParamMap(const LPFLYTRAPPARAM params, const int params_len, const wchar_t *dumpId, const wchar_t *reportUrl)
 {
@@ -1091,19 +1096,22 @@ map<wstring, wstring> *CreateParamMap(const LPFLYTRAPPARAM params, const int par
 	int iCount;
 	wchar_t *offset;
 	wchar_t nameBuf[64];
-	unsigned char *inBuf;	// this is a char (not wchar_t) because its used for storing bytes of binary data
+	unsigned char *inBuf = NULL;	// this is a char (not wchar_t) because its used for storing bytes of binary data
+	unsigned char *tmpBuf = NULL;	// this is a char (not wchar_t) because its used for storing bytes of binary data
+	unsigned char *b64OutBuf = NULL;
 	wchar_t *outBuf = NULL;
 	wchar_t *fnameBuf;
 	wchar_t *tfnameBuf;
-	unsigned char *encodedStr;
-	int encSize;
-	wchar_t *wencodedStr;
 	wchar_t *tb;
-	int fSize = 0;
+	size_t fSize = 0;
 	int fr;
 	wchar_t *expandedFName = NULL;
-#define FLYTRAP_FILEREAD_BUFSIZE	2040
-	for(int i = 0; i < params_len; i++) {
+	size_t obSize;
+	wchar_t *baseOutBuf;
+	int fen;
+	int i;
+
+	for(i = 0; i < params_len; i++) {
 		if(params[i].name == NULL) {
 			// blank entry, just skip it.  We could probably break out of the loop but we won't do that since
 			// we may have a way to delete entries in the future
@@ -1113,6 +1121,20 @@ map<wstring, wstring> *CreateParamMap(const LPFLYTRAPPARAM params, const int par
 			// we may have a way to delete entries in the future
 			continue;
 		} else if(wcscmp(params[i].name, FLYTRAP_PARAM_ATTACHFILES_PARAM L"s") == 0) {
+			inBuf = (unsigned char*)calloc(FLYTRAP_FILEREAD_BUFSIZE, sizeof(char));
+			if(inBuf == NULL) {
+				// out of memory!
+				// @TODO Do something about this error
+				break;
+			}
+			tmpBuf = (unsigned char*)calloc((((FLYTRAP_FILEREAD_BUFSIZE*4)/3)+2), sizeof(char));
+			if(tmpBuf == NULL) {
+				// out of memory!
+				// @TODO Do something about this error
+				free(inBuf);
+				break;
+			}
+
 			// Add the files specified
 			if(params[i].value != NULL) {
 				if(wcslen(params[i].value)>0) {
@@ -1134,47 +1156,46 @@ map<wstring, wstring> *CreateParamMap(const LPFLYTRAPPARAM params, const int par
 								outBuf = mprintf(L"%s;-2;File could not be opened for reading: %d", expandedFName, _errno());
 								free(expandedFName);
 							} else {
-								free(expandedFName);
-								inBuf = (unsigned char*)malloc(FLYTRAP_FILEREAD_BUFSIZE * sizeof(char));
-								if(inBuf == NULL) {
-									// out of memory!
-									// @TODO Do something about this error
-									break;
-								}
-								outBuf = wcsdup(L"");
-								while(!feof(fp)) {
-									// loop through the file reading in the data and adding it to the base64 encoded output
-									fr = fread(inBuf, sizeof(char), FLYTRAP_FILEREAD_BUFSIZE, fp);
-									int fen = ferror(fp);
-									if(fen != 0) {
-										tb = outBuf;
-										outBuf = mprintf(L"%sCould not read from file: %d", tb, _errno());
-										free(tb);
-										break;
+								fseek(fp, 0, SEEK_END);
+								size_t fOffset = ftell(fp);
+								if(fOffset == 0) {
+									// empty file, shortcut case
+									outBuf = mprintf(L"%s;0;", expandedFName);
+									free(expandedFName);
+									fclose(fp);
+								} else {
+									fseek(fp, 0, SEEK_SET);
+									obSize = (((fOffset * 4)/3) + ( ((fOffset%4) > 0) ? 1 : 0 ));
+									fOffset = 0;
+									b64OutBuf = (unsigned char*)calloc(obSize + 2, sizeof(char));
+									if(b64OutBuf == NULL) {
+										// @TODO Do something to handle this error!
 									}
-									if(fr == 0) {
-										// this shouldn't ever happen, but just in case
-										break;
+									baseOutBuf = (wchar_t*)b64OutBuf;
+									while(!feof(fp)) {
+										// loop through the file reading in the data and adding it to the base64 encoded output
+										fr = fread(inBuf, sizeof(char), FLYTRAP_FILEREAD_BUFSIZE, fp);
+										fen = ferror(fp);
+										if(fen != 0) {
+											free(baseOutBuf);
+											outBuf = mprintf(L"Could not read from file: %d@%d", _errno(), fOffset);
+											break;
+										}
+										fOffset += fr;
+										if(fr == 0) {
+											// this shouldn't ever happen, but just in case
+											break;
+										}
+										b64OutBuf += base64blockencode(inBuf, b64OutBuf, fr);
+										fSize += fr;
 									}
-									fSize += fr;
-									encodedStr = base64encode(inBuf, fr, -1);
-									encSize = strlen((const char *)encodedStr) + 1;
-									wencodedStr = (wchar_t *)calloc(encSize + 1, sizeof(wchar_t));
-									mbstowcs(wencodedStr, (const char *)encodedStr, encSize + 1);
-									free(encodedStr);
-									tb = outBuf;
-									outBuf = mprintf(L"%s%s", tb, wencodedStr);
-									free(tb);
-									free(wencodedStr);
-								}
-								fclose(fp);
-								free(inBuf);
-								tb = outBuf;
+									fclose(fp);
+									tb = baseOutBuf;
 
-								expandedFName = ExpandEnvVarsInStr(fnameBuf);
-								outBuf = mprintf(L"%s;%d;%s", expandedFName, fSize, tb);
-								free(expandedFName);
-								free(tb);
+									outBuf = mprintf(L"%s;%d;%S", expandedFName, fSize, tb);
+									free(expandedFName);
+									free(tb);
+								}
 							}
 						} else {
 							outBuf = wcsdup(L"File name missing;-1;");
@@ -1192,54 +1213,55 @@ map<wstring, wstring> *CreateParamMap(const LPFLYTRAPPARAM params, const int par
 						// catch the remaining filename in the buffer
 						// fnameBuf now represents the current filename we're trying to load
 						// load the file and generate outBuf
+						// fnameBuf now represents the current filename we're trying to load
+						// load the file and generate outBuf
 						if(wcslen(fnameBuf) > 0) {
 							expandedFName = ExpandEnvVarsInStr(fnameBuf);
-							fp = _wfopen(fnameBuf, L"rb");
+							fp = _wfopen(expandedFName, L"rb");
 							if(fp == NULL) {
-								outBuf = mprintf(L"%s;-2;File could not be opened for reading: %d.", fnameBuf, _errno());
+								outBuf = mprintf(L"%s;-2;File could not be opened for reading: %d", expandedFName, _errno());
 								free(expandedFName);
 							} else {
-								free(expandedFName);
-								outBuf = wcsdup(L"");
-								inBuf = (unsigned char*)malloc(FLYTRAP_FILEREAD_BUFSIZE * sizeof(char));
-								if(inBuf == NULL) {
-									// out of memory!
-									// @TODO Do something about this error
-									break;
-								}
-								while(!feof(fp)) {
-									// loop through the file reading in the data and adding it to the base64 encoded output
-									fr = fread(&inBuf, 1, FLYTRAP_FILEREAD_BUFSIZE, fp);
-									int fen = ferror(fp);
-									if(fen != 0) {
-										tb = outBuf;
-										outBuf = mprintf(L"%sCould not read from file: %d", tb, _errno());
-										free(tb);
-										break;
+								fseek(fp, 0, SEEK_END);
+								size_t fOffset = ftell(fp);
+								if(fOffset == 0) {
+									// empty file, shortcut case
+									outBuf = mprintf(L"%s;0;", expandedFName);
+									free(expandedFName);
+									fclose(fp);
+								} else {
+									fseek(fp, 0, SEEK_SET);
+									obSize = (((fOffset * 4)/3) + ( ((fOffset%4) > 0) ? 1 : 0 ));
+									fOffset = 0;
+									b64OutBuf = (unsigned char*)calloc(obSize + 2, sizeof(char));
+									if(b64OutBuf == NULL) {
+										// @TODO Do something to handle this error!
 									}
-									if(fr == 0) {
-										// this shouldn't ever happen, but just in case
-										break;
+									baseOutBuf = (wchar_t*)b64OutBuf;
+									while(!feof(fp)) {
+										// loop through the file reading in the data and adding it to the base64 encoded output
+										fr = fread(inBuf, sizeof(char), FLYTRAP_FILEREAD_BUFSIZE, fp);
+										fen = ferror(fp);
+										if(fen != 0) {
+											free(baseOutBuf);
+											outBuf = mprintf(L"Could not read from file: %d@%d", _errno(), fOffset);
+											break;
+										}
+										fOffset += fr;
+										if(fr == 0) {
+											// this shouldn't ever happen, but just in case
+											break;
+										}
+										b64OutBuf += base64blockencode(inBuf, b64OutBuf, fr);
+										fSize += fr;
 									}
+									fclose(fp);
+									tb = baseOutBuf;
 
-									fSize += fr;
-									encodedStr = base64encode(inBuf, fr, -1);
-									encSize = strlen((const char *)encodedStr) + 1;
-									wencodedStr = (wchar_t *)calloc(encSize + 1, sizeof(wchar_t));
-									mbstowcs(wencodedStr, (const char *)encodedStr, encSize + 1);
-									free(encodedStr);
-									tb = outBuf;
-									outBuf = mprintf(L"%s%s", tb, wencodedStr);
+									outBuf = mprintf(L"%s;%d;%S", expandedFName, fSize, tb);
+									free(expandedFName);
 									free(tb);
-									free(wencodedStr);
 								}
-								free(inBuf);
-								fclose(fp);
-								tb = outBuf;
-								expandedFName = ExpandEnvVarsInStr(fnameBuf);
-								outBuf = mprintf(L"%s;%d;%s", expandedFName, fSize, tb);
-								free(expandedFName);
-								free(tb);
 							}
 						} else {
 							outBuf = wcsdup(L"File name missing;-1;");
@@ -1249,11 +1271,14 @@ map<wstring, wstring> *CreateParamMap(const LPFLYTRAPPARAM params, const int par
 						(*paramsStr)[nameBuf] = outBuf;
 						// outBuf is no longer needed
 						free(outBuf);
+						fnameBuf = offset;
 						iCount++;
 					}
 					free(tfnameBuf);
 				}
 			}
+			free(inBuf);
+			free(tmpBuf);
 		} else if(wcscmp(params[i].name, FLYTRAP_PARAM_ATTACHREGKEY_PARAM L"s") == 0) {
 			// Dump the specified registry keys and include them
 			if(params[i].value != NULL) {

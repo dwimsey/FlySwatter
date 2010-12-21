@@ -180,6 +180,36 @@ char *b64append(const char *inbuf, const char* format)
 	return(retVal);
 }
 
+size_t base64blockencode(unsigned char *inBuf, unsigned char *outBuf, size_t byteCount)
+{
+	unsigned char *nextIn, *nextOut;
+	int encodedSize = (byteCount * 4)/3+4;
+	size_t i = 0;
+	int blockLen;
+
+	nextIn = inBuf;
+	nextOut = outBuf;
+
+	for(i = 0; i < (byteCount - 2); i+=3) {
+		nextOut[0] = cb64[ nextIn[0] >> 2 ];
+		nextOut[1] = cb64[ ((nextIn[0] & 0x03) << 4) | ((nextIn[1] & 0xf0) >> 4) ];
+		nextOut[2] = cb64[ ((nextIn[1] & 0x0f) << 2) | ((nextIn[2] & 0xc0) >> 6) ];
+		nextOut[3] = cb64[ nextIn[2] & 0x3f ];
+		nextIn += 3;
+		nextOut += 4;
+	}
+		
+	blockLen = (byteCount - (nextIn - inBuf));
+	if(blockLen > 0) {
+		nextOut[0] = cb64[ nextIn[0] >> 2 ];
+		nextOut[1] = cb64[ ((nextIn[0] & 0x03) << 4) | ((nextIn[1] & 0xf0) >> 4) ];
+		nextOut[2] = (unsigned char) (blockLen > 1 ? cb64[ ((nextIn[1] & 0x0f) << 2) | ((nextIn[2] & 0xc0) >> 6) ] : '=');
+		nextOut[3] = (unsigned char) (blockLen > 2 ? cb64[ nextIn[2] & 0x3f ] : '=');
+		nextOut += 4;
+	}
+	return(nextOut - outBuf);
+}
+
 /*
 ** base64encode
 **

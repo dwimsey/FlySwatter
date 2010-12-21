@@ -79,6 +79,7 @@ extern "C" {
 	void FlyTrapOutOfProcessDumpCallback(void *dump_context, ClientInfo *client_info, const std::wstring *dump_path);
 	bool FlyTrapInProcessDumpCallback(const wchar_t* dumpPath, const wchar_t* dumpId, void* ctx, EXCEPTION_POINTERS* exceptionInfo, MDRawAssertionInfo* assertionInfo, bool dumpSucceeded);
 
+	size_t base64blockencode(unsigned char *inBuf, unsigned char *outBuf, size_t byteCount);
 	unsigned char *base64encode(unsigned char *inBuf, size_t inSize, int lineSize);
 	char *b64append(const char *inbuf, const char* format);
 
