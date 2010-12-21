@@ -1190,6 +1190,7 @@ map<wstring, wstring> *CreateParamMap(const LPFLYTRAPPARAM params, const int par
 										fSize += fr;
 									}
 									fclose(fp);
+									b64OutBuf[0] = NULL;
 									tb = baseOutBuf;
 
 									outBuf = mprintf(L"%s;%d;%S", expandedFName, fSize, tb);
@@ -1256,6 +1257,7 @@ map<wstring, wstring> *CreateParamMap(const LPFLYTRAPPARAM params, const int par
 										fSize += fr;
 									}
 									fclose(fp);
+									b64OutBuf[0] = NULL;
 									tb = baseOutBuf;
 
 									outBuf = mprintf(L"%s;%d;%S", expandedFName, fSize, tb);
