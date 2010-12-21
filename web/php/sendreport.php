@@ -125,5 +125,11 @@ if(!$fp) {
 $outputXml = $xmlDoc->saveXML();
 fwrite($fp, $outputXml);
 fclose($fp);
-echo "Error report queued for processing.\r\n\r\nCrash ID: ${fscid}";
- ?>
+
+global $report_url_sendcomplete;
+if($report_url_sendcomplete == NULL || $report_url_sendcomplete == '') {
+	echo "Error report queued for processing.\r\n\r\nCrash ID: ${fscid}";
+} else {
+	echo "REPORTURL: ${report_url_sendcomplete}${fscid} Error report queued for processing.\r\n\r\nCrash ID: ${fscid}";
+}
+?>

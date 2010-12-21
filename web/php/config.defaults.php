@@ -34,7 +34,6 @@ $cache_minidump_text = 1;
 global $cache_minidump_raw;
 $cache_minidump_raw = 1;
 
-
 global $use_browser_xslt;
 $use_browser_xslt = true;
 
@@ -44,7 +43,15 @@ $stackwalker_path = "${scripts_dir}/bin/minidump_stackwalk";
 global $symbols_dir;
 $symbols_dir = "${scripts_dir}/symbols";
 
-require_once('config.defaults.php');
+global $report_url_sendcomplete;
+$report_url_sendcomplete = 'http://localhost/flyswatter/reportsummary.php?dumpid=';
+
+global $url_base;
+$url_base = "http://localhost/flyswatter/";
+
+global $url_submit_report;
+$url_submit_report = "${url_base}sendreport.php";
+
 if(file_exists('config.php')) {
 	require_once('config.php');
 }
