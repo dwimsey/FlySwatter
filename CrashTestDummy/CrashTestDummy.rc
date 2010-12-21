@@ -1,6 +1,7 @@
 // Microsoft Visual C++ generated resource script.
 //
 #include "resource.h"
+#include "fsctd_version.h"
 
 #define APSTUDIO_READONLY_SYMBOLS
 /////////////////////////////////////////////////////////////////////////////
@@ -107,8 +108,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,0,0,1
- PRODUCTVERSION 1,0,0,1
+ FILEVERSION FSCTD_FILEVERSION
+ PRODUCTVERSION FSCTD_PRODUCTVERSION
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -123,14 +124,15 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "TODO: <Company name>"
-            VALUE "FileDescription", "TODO: <File description>"
-            VALUE "FileVersion", "1.0.0.1"
+            VALUE "CompanyName", ""
+            VALUE "FileDescription", "FlyTrap Crash Test client"
+            VALUE "FileVersion", FSCTD_STRFILEVERSION
+			VALUE "BuildFlags", FSCTD_STRSPECIALBUILD
             VALUE "InternalName", "CrashTestDummy.exe"
-            VALUE "LegalCopyright", "TODO: (c) <Company name>.  All rights reserved."
+            VALUE "LegalCopyright", "Copyright (C) 2003-2010, David Wimsey"
             VALUE "OriginalFilename", "CrashTestDummy.exe"
-            VALUE "ProductName", "TODO: <Product name>"
-            VALUE "ProductVersion", "1.0.0.1"
+            VALUE "ProductName", "FlySwatter Error Reporting System"
+            VALUE "ProductVersion", FSCTD_STRPRODUCTVERSION
         END
     END
     BLOCK "VarFileInfo"
