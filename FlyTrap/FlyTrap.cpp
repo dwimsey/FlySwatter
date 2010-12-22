@@ -1172,6 +1172,7 @@ map<wstring, wstring> *CreateParamMap(const LPFLYTRAPPARAM params, const int par
 										// @TODO Do something to handle this error!
 									}
 									baseOutBuf = (wchar_t*)b64OutBuf;
+									fSize = 0;
 									while(!feof(fp)) {
 										// loop through the file reading in the data and adding it to the base64 encoded output
 										fr = fread(inBuf, sizeof(char), FLYTRAP_FILEREAD_BUFSIZE, fp);
@@ -1239,6 +1240,7 @@ map<wstring, wstring> *CreateParamMap(const LPFLYTRAPPARAM params, const int par
 										// @TODO Do something to handle this error!
 									}
 									baseOutBuf = (wchar_t*)b64OutBuf;
+									fSize = 0;
 									while(!feof(fp)) {
 										// loop through the file reading in the data and adding it to the base64 encoded output
 										fr = fread(inBuf, sizeof(char), FLYTRAP_FILEREAD_BUFSIZE, fp);
