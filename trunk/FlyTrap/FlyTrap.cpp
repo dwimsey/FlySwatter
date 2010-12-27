@@ -1070,7 +1070,17 @@ void DeleteParamMap(map<wstring, wstring> *oldMap)
 // This value must be such that if multipled by 4, then divided by 3 the result is a whole number.
 // The value of 3072 (3k) results in a 4096 (4k) block with no dangling characters when base64blockencode
 // is called.
-#define FLYTRAP_FILEREAD_BUFSIZE	3072
+// The value of 6144 (6k) results in a 8192 (8k) block with no dangling characters when base64blockencode
+// is called.
+// The value of 12288 (12k) results in a 16384 (16k) block with no dangling characters when base64blockencode
+// is called.
+// The value of 24576 (24k) results in a 32768 (32k) block with no dangling characters when base64blockencode
+// is called.
+// The value of 49152 (48k) results in a 65536 (64k) block with no dangling characters when base64blockencode
+// is called.
+// The value of 98304 (96k) results in a 131072 (128k) block with no dangling characters when base64blockencode
+// is called.
+#define FLYTRAP_FILEREAD_BUFSIZE	24576
 
 // creates a map<wstring, wstring> suitable for submission using the breakpad CrashReportSender.SendReport method
 map<wstring, wstring> *CreateParamMap(const LPFLYTRAPPARAM params, const int params_len, const wchar_t *dumpId, const wchar_t *reportUrl)
