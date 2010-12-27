@@ -930,9 +930,15 @@ int checkUrl(wchar_t *cPtr)
 #define FLYTRAP_CRASHALERT_RESPONSE_TEXT_BUFFER_SIZE	(8192*8)
 int FlyTrapCrashAlert(void *parentWindowHandle, const wchar_t *reportUrl, const int report_mode, const wchar_t *dumpId, const wchar_t *miniDumpFilename, const LPFLYTRAPPARAM params, const int params_len)
 {
+	// Prepare the report extra parameters list.
+	map<wstring, wstring> *paramsStr = CreateParamMap(params, params_len, dumpId, reportUrl);
+	if(paramsStr == NULL) {
+		return(FLYTRAP_ERROR_OUTOFMEMORY);
+	}
 	// display the dump info to the user and allow them to determine if they want to send a crash report
 	LPFLYTRAPCRASHALERTDIALOGINITDATA idData = (LPFLYTRAPCRASHALERTDIALOGINITDATA)calloc(1, sizeof(FLYTRAPCRASHALERTDIALOGINITDATA));
 	if(idData == NULL) {
+		DeleteParamMap(paramsStr);
 		return(FLYTRAP_ERROR_OUTOFMEMORY);
 	}
 	idData->dumpFileName = (wchar_t*)miniDumpFilename;
@@ -945,6 +951,7 @@ int FlyTrapCrashAlert(void *parentWindowHandle, const wchar_t *reportUrl, const 
 	LPDLGTEMPLATE dlgTemplate = CreateFSWin32CrashAlertDlgTemplate();
 	if(dlgTemplate == NULL) {
 		free(idData);
+		DeleteParamMap(paramsStr);
 		return(-5);
 	}
 	int dialogResult = DialogBoxIndirectParamW(fsgh_Instance, dlgTemplate, (HWND)parentWindowHandle, FlyTrapCrashAlertDialogWndProc, (LPARAM)idData);
@@ -953,6 +960,7 @@ int FlyTrapCrashAlert(void *parentWindowHandle, const wchar_t *reportUrl, const 
 
 	wchar_t *buf = (wchar_t*)calloc(FLYTRAP_CRASHALERT_RESPONSE_TEXT_BUFFER_SIZE+1, sizeof(wchar_t));
 	if(buf == NULL) {
+		DeleteParamMap(paramsStr);
 		return(FLYTRAP_ERROR_OUTOFMEMORY);
 	}
 
@@ -961,12 +969,14 @@ int FlyTrapCrashAlert(void *parentWindowHandle, const wchar_t *reportUrl, const 
 			break;
 		case 2: // don't send a report
 			free(buf);
+			DeleteParamMap(paramsStr);
 			return(0);
 		default:
 			// anything else is an error, we're going to send the report anyway
 			wsprintf(buf, L"This application has crashed, however the error reporting dialog could not be created (%u).  Would you like to send a crash report anyway?", dialogResult);
 			if(MessageBoxW((HWND)parentWindowHandle, buf, L"Application crash detected!", MB_OKCANCEL) != IDOK) {
 				free(buf);
+				DeleteParamMap(paramsStr);
 				return(-6);
 			}
 			break;
@@ -1017,8 +1027,6 @@ int FlyTrapCrashAlert(void *parentWindowHandle, const wchar_t *reportUrl, const 
 		next_offset = NULL;
 	}
 
-		// Prepare the report extra parameters list.
-	map<wstring, wstring> *paramsStr = CreateParamMap(params, params_len, dumpId, reportUrl);
 	rs = cs.SendCrashReport(reportUrl, (*paramsStr), miniDumpFilename, &reportCode);
 	DeleteParamMap(paramsStr);
 	free(tmpPtr);
