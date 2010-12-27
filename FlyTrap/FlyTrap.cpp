@@ -848,20 +848,15 @@ bool FlyTrapInProcessDumpCallback(const wchar_t *dumpPath, const wchar_t *dumpId
 	}
 
 	wchar_t miniDumpFilename[1025];
-	if(dumpSucceeded == true) {
-		if(dumpPath == NULL || dumpId == NULL) {
-			FlyTrapCrashAlert(NULL, ctx->reportUrl, (exceptionInfo == NULL ? FLYTRAP_REPORTMODE_USERTRIGGER : FLYTRAP_REPORTMODE_CRASH), dumpId, NULL, ctx->params, ctx->params_len);
-		} else {
-			wsprintf(miniDumpFilename, L"%s\\%s.dmp", dumpPath, dumpId);
-			miniDumpFilename[1023] = L'\0';
-			FlyTrapCrashAlert(NULL, ctx->reportUrl, (exceptionInfo == NULL ? FLYTRAP_REPORTMODE_USERTRIGGER : FLYTRAP_REPORTMODE_CRASH), dumpId, miniDumpFilename, ctx->params, ctx->params_len);
-			// the minidump should already be gone, but we're going to remove it again anyway to be safe
-			_wunlink(miniDumpFilename);
-		}
+	if((dumpSucceeded == true) && (dumpPath != NULL) && (dumpId != NULL)) {
+		wsprintf(miniDumpFilename, L"%s\\%s.dmp", dumpPath, dumpId);
+		miniDumpFilename[1023] = L'\0';
+		FlyTrapCrashAlert(NULL, ctx->reportUrl, (exceptionInfo == NULL ? FLYTRAP_REPORTMODE_USERTRIGGER : FLYTRAP_REPORTMODE_CRASH), dumpId, miniDumpFilename, ctx->params, ctx->params_len);
+		// the minidump should already be gone, but we're going to remove it again anyway to be safe
+		_wunlink(miniDumpFilename);
 	} else {
 		FlyTrapCrashAlert(NULL, ctx->reportUrl, (exceptionInfo == NULL ? FLYTRAP_REPORTMODE_USERTRIGGER : FLYTRAP_REPORTMODE_CRASH), dumpId, NULL, ctx->params, ctx->params_len);
 	}
-
 	return(true);
 }
 
