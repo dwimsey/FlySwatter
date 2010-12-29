@@ -270,7 +270,7 @@
 									</xsl:when>
 									<xsl:otherwise>
 								<a>
-									<xsl:attribute name="href">reportsummary.php?dumpid=<xsl:value-of select="/UploadedDebugReport/Parameters/FlyTrapCrashId"/>&amp;afile=<xsl:value-of select="substring-after(name(.), &quot;FlyTrap_AttachFile_&quot;)"/></xsl:attribute>
+									<xsl:attribute name="href">reportsummary.php?dumpid=<xsl:value-of select="/UploadedDebugReport/Parameters/FlyTrapCrashId"/>&amp;afile=<xsl:value-of select="substring-after(name(.), &quot;FlyTrap_AttachFiles_&quot;)"/></xsl:attribute>
 								<xsl:value-of select="substring-before(., &quot;;&quot;)"/>
 								</a>
 									</xsl:otherwise>
