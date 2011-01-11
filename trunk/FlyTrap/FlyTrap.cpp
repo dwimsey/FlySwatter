@@ -47,6 +47,11 @@
 #define tstrdup _wcsdup
 #endif
 
+#define FLYTRAP_INTERNALFLAGS_ADMINDISABLED						(1<<0)
+#define FLYTRAP_INTERNALFLAGS_ERROR_REPORTS_ADMINDISABLED		(1<<1)
+#define FLYTRAP_INTERNALFLAGS_DEBUG_REPORTS_ADMINDISABLED		(1<<2)
+int g_FlyTrap_Flags;
+
 #define FLYTRAPSERVERSTARTUPTIMEOUT	20000
 #define MESSAGE_BUFFER_LEN	(1<<20)
 #define MAX_PATH_LEN	(1<<15)
@@ -315,10 +320,238 @@ bool AddExceptionHandler(LPFLYTRAPCONTEXT clientContext)
 	}
 }
 
+#include <windows.h>
 FLYTRAP_API int __stdcall FlyTrapInitClient(wchar_t *dumpPath, wchar_t *reportUrl, wchar_t *OOPExePath)
 {
 	TCHAR *expandedDumpPath = NULL;
 	size_t edpSize = 0;
+#ifdef WIN32
+	HKEY pKey = 0;
+	int flagsSet = 0;
+	DWORD rVal;
+	DWORD eVal;
+	DWORD rType;
+	DWORD cbData = sizeof(DWORD);
+	// Open the machine wide policy for reading
+	rVal = RegOpenKeyEx(HKEY_LOCAL_MACHINE, _T("Software\\Policies\\FlyTrap"), 0, KEY_READ, &pKey);
+	if(rVal == ERROR_SUCCESS) {
+		// We have some sort of system wide policy, look for values
+
+		// Is the 'Enabled' value set?
+		cbData = sizeof(DWORD);
+		rVal = RegQueryValueEx(pKey, _T("Enabled"), 0, &rType, (LPBYTE)&eVal, &cbData);
+		if(rVal == ERROR_SUCCESS) {
+			// What type of value is set?
+			if(rType == REG_DWORD) {
+				if(eVal == 0) {
+					g_FlyTrap_Flags |= FLYTRAP_INTERNALFLAGS_ADMINDISABLED;
+					OutputDebugString(_T("FlyTrap: Disabled by system policy.\r\n"));
+				} else {
+					OutputDebugString(_T("FlyTrap: Enabled by system policy.\r\n"));
+				}
+			} else if(rType == REG_SZ) {
+				// determine if the string is "0", which we'll accept as well
+				if(((TCHAR*)&eVal)[0] == _T('0') && ((TCHAR*)&eVal)[1] == _T('\0') ) {
+					g_FlyTrap_Flags |= FLYTRAP_INTERNALFLAGS_ADMINDISABLED;
+					OutputDebugString(_T("FlyTrap: Disabled by system policy setting.\r\n"));
+				} else {
+					OutputDebugString(_T("FlyTrap: Enabled by system policy setting.\r\n"));
+				}
+			} else {
+				// we don't know what to do with this type, so just ignore it
+				OutputDebugString(_T("FlyTrap: Invalid system policy setting for Enabled.  Assuming setting: Enabled\r\n"));
+			}
+			flagsSet |= FLYTRAP_INTERNALFLAGS_ADMINDISABLED;
+		} else if(rVal == ERROR_MORE_DATA) {
+			OutputDebugString(_T("FlyTrap: Invalid system policy setting for Enabled, value is to long.  Assuming setting: Enabled\r\n"));
+		} else if(rVal != ERROR_FILE_NOT_FOUND) {
+			OutputDebugString(_T("FlyTrap: Unable to read system policy value for Enabled.  Assuming setting: Enabled\r\n"));
+		}
+
+		// Is the 'SendErrorReports' value set?
+		cbData = sizeof(DWORD);
+		rVal = RegQueryValueEx(pKey, _T("SendErrorReports"), 0, &rType, (LPBYTE)&eVal, &cbData);
+		if(rVal == ERROR_SUCCESS) {
+			// What type of value is set?
+			if(rType == REG_DWORD) {
+				if(eVal == 0) {
+					g_FlyTrap_Flags |= FLYTRAP_INTERNALFLAGS_ERROR_REPORTS_ADMINDISABLED;
+					OutputDebugString(_T("FlyTrap: Error reports disabled by system policy.\r\n"));
+				} else {
+					OutputDebugString(_T("FlyTrap: Error reports enabled by system policy.\r\n"));
+				}
+			} else if(rType == REG_SZ) {
+				// determine if the string is "0", which we'll accept as well
+				if(((TCHAR*)&eVal)[0] == _T('0') && ((TCHAR*)&eVal)[1] == _T('\0') ) {
+					g_FlyTrap_Flags |= FLYTRAP_INTERNALFLAGS_ERROR_REPORTS_ADMINDISABLED;
+					OutputDebugString(_T("FlyTrap: Error reports disabled by system policy setting.\r\n"));
+				} else {
+					OutputDebugString(_T("FlyTrap: Error reports enabled by system policy setting.\r\n"));
+				}
+			} else {
+				// we don't know what to do with this type, so just ignore it
+				OutputDebugString(_T("FlyTrap: Invalid system policy setting for Send Error Reports.  Assuming setting: Enabled\r\n"));
+			}
+			flagsSet |= FLYTRAP_INTERNALFLAGS_ERROR_REPORTS_ADMINDISABLED;
+		} else if(rVal == ERROR_MORE_DATA) {
+			OutputDebugString(_T("FlyTrap: Invalid system policy setting for Send Error Reports, value is to long.\r\n"));
+		} else if(rVal != ERROR_FILE_NOT_FOUND) {
+			OutputDebugString(_T("FlyTrap: Unable to read system policy value for Send Error Reports.\r\n"));
+		}
+
+		// ""
+		// Is the 'SendDebugReports' value set?
+		cbData = sizeof(DWORD);
+		rVal = RegQueryValueEx(pKey, _T("SendDebugReports"), 0, &rType, (LPBYTE)&eVal, &cbData);
+		if(rVal == ERROR_SUCCESS) {
+			// What type of value is set?
+			if(rType == REG_DWORD) {
+				if(eVal == 0) {
+					g_FlyTrap_Flags |= FLYTRAP_INTERNALFLAGS_DEBUG_REPORTS_ADMINDISABLED;
+					OutputDebugString(_T("FlyTrap: Debug reports disabled by system policy.\r\n"));
+				} else {
+					OutputDebugString(_T("FlyTrap: Debug reports enabled by system policy.\r\n"));
+				}
+			} else if(rType == REG_SZ) {
+				// determine if the string is "0", which we'll accept as well
+				if(((TCHAR*)&eVal)[0] == _T('0') && ((TCHAR*)&eVal)[1] == _T('\0') ) {
+					g_FlyTrap_Flags |= FLYTRAP_INTERNALFLAGS_DEBUG_REPORTS_ADMINDISABLED;
+					OutputDebugString(_T("FlyTrap: Debug reports disabled by system policy setting.\r\n"));
+				} else {
+					OutputDebugString(_T("FlyTrap: Debug reports enabled by system policy setting.\r\n"));
+				}
+			} else {
+				// we don't know what to do with this type, so just ignore it
+				OutputDebugString(_T("FlyTrap: Invalid system policy setting for Send Debug Reports.  Assuming setting: Enabled\r\n"));
+			}
+			flagsSet |= FLYTRAP_INTERNALFLAGS_DEBUG_REPORTS_ADMINDISABLED;
+		} else if(rVal == ERROR_MORE_DATA) {
+			OutputDebugString(_T("FlyTrap: Invalid system policy setting for Send Debug Reports, value is to long.\r\n"));
+		} else if(rVal != ERROR_FILE_NOT_FOUND) {
+			OutputDebugString(_T("FlyTrap: Unable to read system policy value for Send Debug Reports.\r\n"));
+		}
+		RegCloseKey(pKey);
+	}
+
+	// Open the user policy for reading
+	rVal = RegOpenKeyEx(HKEY_CURRENT_USER, _T("Software\\Policies\\FlyTrap"), 0, KEY_READ, &pKey);
+	if(rVal == ERROR_SUCCESS) {
+		// We have some sort of user specific policy, look for values
+
+		// Is there a system policy for the Enable setting?
+		// The system policy overrides the user policy for this setting, so ignore it if set
+		if(((flagsSet & FLYTRAP_INTERNALFLAGS_ADMINDISABLED) == 0)) {
+			// No system policy, is the 'Enabled' value set?
+			cbData = sizeof(DWORD);
+			rVal = RegQueryValueEx(pKey, _T("Enabled"), 0, &rType, (LPBYTE)&eVal, &cbData);
+			if(rVal == ERROR_SUCCESS) {
+				// What type of value is set?
+				if(rType == REG_DWORD) {
+					if(eVal == 0) {
+						g_FlyTrap_Flags |= FLYTRAP_INTERNALFLAGS_ADMINDISABLED;
+						OutputDebugString(_T("FlyTrap: Disabled by user policy.\r\n"));
+					} else {
+						OutputDebugString(_T("FlyTrap: Enabled by user policy.\r\n"));
+					}
+				} else if(rType == REG_SZ) {
+					// determine if the string is "0", which we'll accept as well
+					if(((TCHAR*)&eVal)[0] == _T('0') && ((TCHAR*)&eVal)[1] == _T('\0') ) {
+						g_FlyTrap_Flags |= FLYTRAP_INTERNALFLAGS_ADMINDISABLED;
+						OutputDebugString(_T("FlyTrap: Disabled by user policy setting.\r\n"));
+					} else {
+						OutputDebugString(_T("FlyTrap: Enabled by user policy setting.\r\n"));
+					}
+				} else {
+					// we don't know what to do with this type, so just ignore it
+					OutputDebugString(_T("FlyTrap: Invalid user policy setting for Enabled.  Assuming setting: Enabled\r\n"));
+				}
+				flagsSet |= FLYTRAP_INTERNALFLAGS_ADMINDISABLED;
+			} else if(rVal == ERROR_MORE_DATA) {
+				OutputDebugString(_T("FlyTrap: Invalid user policy setting for Enabled, value is to long.\r\n"));
+			} else if(rVal != ERROR_FILE_NOT_FOUND) {
+				OutputDebugString(_T("FlyTrap: Unable to read user policy value for Enabled.\r\n"));
+			}
+		}
+
+		// Is there a system policy for the 'SendErrorReports' setting?
+		// The system policy overrides the user policy for this setting, so ignore it if set
+		if(((flagsSet & FLYTRAP_INTERNALFLAGS_ERROR_REPORTS_ADMINDISABLED) == 0)) {
+			// No system policy, is the 'SendErrorReports' value set?
+			cbData = sizeof(DWORD);
+			rVal = RegQueryValueEx(pKey, _T("SendErrorReports"), 0, &rType, (LPBYTE)&eVal, &cbData);
+			if(rVal == ERROR_SUCCESS) {
+				// What type of value is set?
+				if(rType == REG_DWORD) {
+					if(eVal == 0) {
+						g_FlyTrap_Flags |= FLYTRAP_INTERNALFLAGS_ERROR_REPORTS_ADMINDISABLED;
+						OutputDebugString(_T("FlyTrap: Error reports enabled by user policy.\r\n"));
+					} else {
+						OutputDebugString(_T("FlyTrap: Error reports disabled by user policy.\r\n"));
+					}
+				} else if(rType == REG_SZ) {
+					// determine if the string is "0", which we'll accept as well
+					if(((TCHAR*)&eVal)[0] == _T('0') && ((TCHAR*)&eVal)[1] == _T('\0') ) {
+						g_FlyTrap_Flags |= FLYTRAP_INTERNALFLAGS_ERROR_REPORTS_ADMINDISABLED;
+						OutputDebugString(_T("FlyTrap: Error reports enabled by user policy setting.\r\n"));
+					} else {
+						OutputDebugString(_T("FlyTrap: Error reports disabled by user policy setting.\r\n"));
+					}
+				} else {
+					// we don't know what to do with this type, so just ignore it
+					OutputDebugString(_T("FlyTrap: Invalid user policy setting for Send Error Reports.  Assuming setting: Enabled\r\n"));
+				}
+				flagsSet |= FLYTRAP_INTERNALFLAGS_ERROR_REPORTS_ADMINDISABLED;
+			} else if(rVal == ERROR_MORE_DATA) {
+				OutputDebugString(_T("FlyTrap: Invalid user policy setting for Send Error Reports, value is to long.\r\n"));
+			} else if(rVal != ERROR_FILE_NOT_FOUND) {
+				OutputDebugString(_T("FlyTrap: Unable to read user policy value for Send Error Reports.\r\n"));
+			}
+		}
+
+		// Is there a system policy for the 'SendDebugReports' setting?
+		// The system policy overrides the user policy for this setting, so ignore it if set
+		if(((flagsSet & FLYTRAP_INTERNALFLAGS_DEBUG_REPORTS_ADMINDISABLED) == 0)) {
+
+			// No system policy, is the 'SendDebugReports' value set?
+			cbData = sizeof(DWORD);
+			rVal = RegQueryValueEx(pKey, _T("SendDebugReports"), 0, &rType, (LPBYTE)&eVal, &cbData);
+			if(rVal == ERROR_SUCCESS) {
+				// What type of value is set?
+				if(rType == REG_DWORD) {
+					if(eVal == 0) {
+						g_FlyTrap_Flags |= FLYTRAP_INTERNALFLAGS_DEBUG_REPORTS_ADMINDISABLED;
+						OutputDebugString(_T("FlyTrap: Debug reports enabled by user policy.\r\n"));
+					} else {
+						OutputDebugString(_T("FlyTrap: Debug reports disabled by user policy.\r\n"));
+					}
+				} else if(rType == REG_SZ) {
+					// determine if the string is "0", which we'll accept as well
+					if(((TCHAR*)&eVal)[0] == _T('0') && ((TCHAR*)&eVal)[1] == _T('\0') ) {
+						g_FlyTrap_Flags |= FLYTRAP_INTERNALFLAGS_DEBUG_REPORTS_ADMINDISABLED;
+						OutputDebugString(_T("FlyTrap: Debug reports enabled by user policy setting.\r\n"));
+					} else {
+						OutputDebugString(_T("FlyTrap: Debug reports disabled by user policy setting.\r\n"));
+					}
+				} else {
+					// we don't know what to do with this type, so just ignore it
+					OutputDebugString(_T("FlyTrap: Invalid user policy setting for Send Debug Reports.  Assuming setting: Enabled\r\n"));
+				}
+				flagsSet |= FLYTRAP_INTERNALFLAGS_DEBUG_REPORTS_ADMINDISABLED;
+			} else if(rVal == ERROR_MORE_DATA) {
+				OutputDebugString(_T("FlyTrap: Invalid user policy setting for Send Debug Reports, value is to long.\r\n"));
+			} else if(rVal != ERROR_FILE_NOT_FOUND) {
+				OutputDebugString(_T("FlyTrap: Unable to read user policy value for Send Debug Reports.\r\n"));
+			}
+
+		}
+		RegCloseKey(pKey);
+	}
+#endif
+
+	if((g_FlyTrap_Flags & FLYTRAP_INTERNALFLAGS_ADMINDISABLED) == FLYTRAP_INTERNALFLAGS_ADMINDISABLED) {
+		OutputDebugString(_T("FlyTrap: InitClient: FlyTrap is disabled by policy.\r\n"));
+		return(FLYTRAP_ERROR_ADMIN_PROHIBITED);
+	}
 
 	if(lctx != NULL) {
 		// the structure pointer shouldn't be initialized, something is wrong
@@ -374,6 +607,9 @@ FLYTRAP_API int __stdcall FlyTrapInitClient(wchar_t *dumpPath, wchar_t *reportUr
 
 FLYTRAP_API int __stdcall FlyTrapShutdownClient(void *clientContext)
 {
+	/// @TODO This will cause a crash so we can find out whats using this;
+	clientContext = NULL;
+	((LPFLYTRAPCONTEXT)clientContext)->enabled = 0;
 	if(clientContext == NULL){
 		return(false);
 	} else {
@@ -437,12 +673,15 @@ FLYTRAP_API void * __stdcall FlyTrapInitServer(wchar_t *dumpPath, wchar_t *repor
 
 FLYTRAP_API int __stdcall FlyTrapEnable()
 {
+	if((g_FlyTrap_Flags & FLYTRAP_INTERNALFLAGS_ADMINDISABLED) == FLYTRAP_INTERNALFLAGS_ADMINDISABLED) {
+		return(FLYTRAP_ERROR_ADMIN_PROHIBITED);
+	}
 	if(lctx == NULL) {
-		return(-1);
+		return(FLYTRAP_ERROR_NO_CONTEXT);
 	}
 	if(lctx->handlerPtr == NULL) {
 		if(AddExceptionHandler(lctx)==0) {
-			return(-2);
+			return(FLYTRAP_ERROR_ADDHANDLER_FAILED);
 		}
 	}
 	return(InterlockedExchange((volatile LONG *)&lctx->enabled, 1));
@@ -450,28 +689,37 @@ FLYTRAP_API int __stdcall FlyTrapEnable()
 
 FLYTRAP_API int __stdcall FlyTrapDisable()
 {
+	if((g_FlyTrap_Flags & FLYTRAP_INTERNALFLAGS_ADMINDISABLED) == FLYTRAP_INTERNALFLAGS_ADMINDISABLED) {
+		return(FLYTRAP_ERROR_ADMIN_PROHIBITED);
+	}
 	if(lctx == NULL) {
-		return(-1);
+		return(FLYTRAP_ERROR_NO_CONTEXT);
 	}
 	if(lctx->handlerPtr == NULL) {
-		return(-2);
+		return(FLYTRAP_ERROR_ADDHANDLER_FAILED);
 	}
 	return(InterlockedExchange((volatile LONG *)&lctx->enabled, 0));
 }
 
 FLYTRAP_API int __stdcall FlyTrapIsEnabled()
 {
+	if((g_FlyTrap_Flags & FLYTRAP_INTERNALFLAGS_ADMINDISABLED) == FLYTRAP_INTERNALFLAGS_ADMINDISABLED) {
+		return(FLYTRAP_ERROR_ADMIN_PROHIBITED);
+	}
 	if(lctx == NULL) {
-		return(-1);
+		return(FLYTRAP_ERROR_NO_CONTEXT);
 	}
 	if(lctx->handlerPtr == NULL) {
-		return(-2);
+		return(FLYTRAP_ERROR_ADDHANDLER_FAILED);
 	}
 	return(lctx->enabled);
 }
 
 FLYTRAP_API void __stdcall FlyTrapSetParam(const wchar_t *name, const wchar_t *value)
 {
+	if((g_FlyTrap_Flags & FLYTRAP_INTERNALFLAGS_ADMINDISABLED) == FLYTRAP_INTERNALFLAGS_ADMINDISABLED) {
+		return;
+	}
 	if(lctx == NULL) {
 		return;
 	}
@@ -588,6 +836,9 @@ const wchar_t *FlyTrapGetParamEx(LPFLYTRAPPARAM params, int params_len, const wc
 
 FLYTRAP_API const wchar_t * __stdcall FlyTrapGetParam(const wchar_t *name)
 {
+	if((g_FlyTrap_Flags & FLYTRAP_INTERNALFLAGS_ADMINDISABLED) == FLYTRAP_INTERNALFLAGS_ADMINDISABLED) {
+		return(NULL);
+	}
 	if(lctx == NULL) {
 		return(NULL);
 	}
@@ -597,6 +848,12 @@ FLYTRAP_API const wchar_t * __stdcall FlyTrapGetParam(const wchar_t *name)
 static int flytrap_in_exception = 0;
 FLYTRAP_API void __stdcall FlyTrapTriggerReport()
 {
+	if((g_FlyTrap_Flags & FLYTRAP_INTERNALFLAGS_ADMINDISABLED) == FLYTRAP_INTERNALFLAGS_ADMINDISABLED) {
+		return;
+	}
+	if((g_FlyTrap_Flags & FLYTRAP_INTERNALFLAGS_DEBUG_REPORTS_ADMINDISABLED) == FLYTRAP_INTERNALFLAGS_DEBUG_REPORTS_ADMINDISABLED) {
+		return;
+	}
 	if(lctx == NULL) {
 		return;
 	}
@@ -610,6 +867,26 @@ FLYTRAP_API void __stdcall FlyTrapTriggerReport()
 
 bool FlyTrapExceptionFilter(void *ctx, EXCEPTION_POINTERS *exceptionInfo, MDRawAssertionInfo *assertionInfo)
 {
+	if((g_FlyTrap_Flags & FLYTRAP_INTERNALFLAGS_ADMINDISABLED) == FLYTRAP_INTERNALFLAGS_ADMINDISABLED) {
+		// we should never get here, but if we do, we certainly don't want to do anything
+		OutputDebugString(_T("FlyTrap: Exception Ignored: FlyTrap is disabled by policy.\r\n"));
+		return(false);
+	}
+
+	if((exceptionInfo != NULL) || (assertionInfo != NULL)) {
+		if((g_FlyTrap_Flags & FLYTRAP_INTERNALFLAGS_ERROR_REPORTS_ADMINDISABLED) == FLYTRAP_INTERNALFLAGS_ERROR_REPORTS_ADMINDISABLED) {
+			// The system admin or user has disabled all error reporting on this system
+			OutputDebugString(_T("FlyTrap: Exception Ignored: Error reporting is disabled by policy.\r\n"));
+			return(false);
+		}
+	} else {
+		if((g_FlyTrap_Flags & FLYTRAP_INTERNALFLAGS_DEBUG_REPORTS_ADMINDISABLED) == FLYTRAP_INTERNALFLAGS_DEBUG_REPORTS_ADMINDISABLED) {
+			// The system admin or user has disabled all error reporting on this system
+			OutputDebugString(_T("FlyTrap: Exception Ignored: Debug reporting is disabled by policy.\r\n"));
+			return(false);
+		}
+	}
+
 	// This filter determines if we have anything to do with catching the exception.  If we return true, the dump
 	// will be written and the dump callback called.  If we return false, the exception will be passed up the
 	// handler chain

@@ -43,10 +43,13 @@ static HMODULE g_hModule;
 void FlyTrap_UnregisterCrashAlertDialogWindowClass(HINSTANCE hInstance);
 void FlyTrap_RegisterCrashAlertDialogWindowClass(HINSTANCE hInstance);
 
+extern int g_FlyTrap_Flags;
+
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved)
 {
 	switch (ul_reason_for_call) {
 		case DLL_PROCESS_ATTACH:
+			g_FlyTrap_Flags = 0;
 			g_hModule = hModule;
 			FlyTrap_RegisterCrashAlertDialogWindowClass(g_hModule);
 			break;
@@ -56,6 +59,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReser
 		case DLL_PROCESS_DETACH:
 			FlyTrap_UnregisterCrashAlertDialogWindowClass(g_hModule);
 			g_hModule = NULL;
+			g_FlyTrap_Flags = 0;
 			break;
 	}
 	return TRUE;
