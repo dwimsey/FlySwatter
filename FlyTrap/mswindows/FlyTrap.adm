@@ -1,0 +1,151 @@
+CLASS MACHINE
+
+CATEGORY FlyTrap
+	
+	POLICY "Enable FlyTrap System Wide"
+		KEYNAME "Software\Policies\FlyTrap"
+		EXPLAIN "This policy setting allows you to disable FlyTrap error reporting for the entire system
+
+If you enable this policy setting, FlyTrap will be loaded by applications configured to use it for error and debug reporting.
+
+If you disable this policy setting, FlyTrap will not be loaded by applications configured to use it and will not be available for sending error or debug reports.
+
+If this setting is not configured, FlyTrap will be loaded by applications configured to use it.
+
+This setting appears in both the Computer Configuration and User Configuration folders.  If these settings conflict, the setting in Computer Configuration takes precedence over the settings in User Configuration.
+
+Recommended Setting: Not Configured"
+		SUPPORTED "FlyTrap 1.0 or Later"
+		VALUENAME "Enabled"
+		VALUEON "1" VALUEOFF "0"
+	END POLICY
+	
+	POLICY "Override FlyTrap Report URL all applications on this system"
+		KEYNAME "Software\Policies\FlyTrap"
+		EXPLAIN "Send FlyTrap error and debug reports for all applications on the system to custom report URL rather than the URL specified by the application.
+
+This policy will allow you to direct error and debug reports to a different URL for processing, such as your own internal support system.
+
+If this setting is enabled, a URL must specified to send error and debug reports to.  All error and debug reports for applications on this system will be sent to the configured URL instead of the url specified by the application.
+
+If this setting is disabled or not configured, reports will be sent to the URL specified by the application.
+
+This setting appears in both the Computer Configuration and User Configuration folders.  If these settings conflict, the setting in Computer Configuration takes precedence over the settings in User Configuration.
+
+Recommended Setting: Not Configured"
+		SUPPORTED "FlyTrap 1.0 or Later"
+		PART "Override FlyTrap Report URL for LetterMark" 
+			EDITTEXT REQUIRED
+			VALUENAME "ReportURL"
+		END PART
+	END POLICY
+	
+	POLICY "Enable FlyTrap Error Reporting"
+		KEYNAME "Software\Policies\FlyTrap"
+		EXPLAIN "Disables error report generation.
+
+If disabled, FlyTrap will not handle errors within applicataions allowing the operating system to handle the error itself.
+
+If enabled or not configured, FlyTrap will generate and send error reports when an application error occurs.
+
+This setting appears in both the Computer Configuration and User Configuration folders.  If these settings conflict, the setting in Computer Configuration takes precedence over the settings in User Configuration.
+
+Recommended Setting: Not Configured"
+		SUPPORTED "FlyTrap 1.0 or Later"
+		VALUENAME "SendErrorReports"
+		VALUEON "1" VALUEOFF "0"
+	END POLICY
+	
+	POLICY "Enable FlyTrap Debug Reporting"
+		KEYNAME "Software\Policies\FlyTrap"
+		EXPLAIN "Disables debug report generation.
+
+If disabled, FlyTrap will not handle debug report requests within applicataions.  Requests will be silently ignored.
+
+If enabled or not configured, FlyTrap will generate and send debug reports when requested.
+
+This setting appears in both the Computer Configuration and User Configuration folders.  If these settings conflict, the setting in Computer Configuration takes precedence over the settings in User Configuration.
+
+Recommended Setting: Not Configured"
+		SUPPORTED "FlyTrap 1.0 or Later"
+		VALUENAME "SendDebugReports"
+		VALUEON "1" VALUEOFF "0"
+	END POLICY
+	
+END CATEGORY
+
+CLASS User
+
+CATEGORY FlyTrap
+	
+	POLICY "Enable FlyTrap For User"
+		KEYNAME "Software\Policies\FlyTrap"
+		EXPLAIN "This policy setting allows you to disable FlyTrap error reporting for any user to which this policy applies.
+
+If you enable this policy setting, FlyTrap will be loaded by applications configured to use it for error and debug reporting.
+
+If you disable this policy setting, FlyTrap will not be loaded by applications configured to use it and will not be available for sending error or debug reports.
+
+If this setting is not configured, FlyTrap will be loaded by applications configured to use it.
+
+This setting appears in both the Computer Configuration and User Configuration folders.  If these settings conflict, the setting in Computer Configuration takes precedence over the settings in User Configuration.
+
+Recommended Setting: Not Configured"
+		SUPPORTED "FlyTrap 1.0 or Later"
+		VALUENAME "Enabled"
+		VALUEON "1" VALUEOFF "0"
+	END POLICY
+	
+	POLICY "Override FlyTrap Report URL for LetterMark"
+		KEYNAME "Software\Policies\FlyTrap"
+		EXPLAIN "Send FlyTrap error and debug reports for LetterMark to a custom report URL rather than RTS.
+
+This policy will allow you to direct error and debug reports to a different URL for processing, such as your own internal support system.
+
+If this setting is enabled, a URL must specified to send error and debug reports to.  All error and debug reports for LetterMark will be sent to the configured URL instead of RTS.
+
+If this setting is disabled or not configured, reports will be sent to RTS.
+
+This setting appears in both the Computer Configuration and User Configuration folders.  If these settings conflict, the setting in Computer Configuration takes precedence over the settings in User Configuration.
+
+Recommended Setting: Not Configured"
+		SUPPORTED "FlyTrap 1.0 or Later"
+		PART "Override FlyTrap Report URL for LetterMark" 
+			EDITTEXT REQUIRED
+			VALUENAME "ReportURL"
+		END PART
+	END POLICY
+	
+	POLICY "Enable FlyTrap Error Reporting"
+		KEYNAME "Software\Policies\FlyTrap"
+		EXPLAIN "Disables error report generation.
+
+If disabled, FlyTrap will not handle errors within applicataions allowing the operating system to handle the error itself.
+
+If enabled or not configured, FlyTrap will generate and send error reports when an application error occurs.
+
+This setting appears in both the Computer Configuration and User Configuration folders.  If these settings conflict, the setting in Computer Configuration takes precedence over the settings in User Configuration.
+
+Recommended Setting: Not Configured"
+		SUPPORTED "FlyTrap 1.0 or Later"
+		VALUENAME "SendErrorReports"
+		VALUEON "1" VALUEOFF "0"
+	END POLICY
+	
+	POLICY "Enable FlyTrap Debug Reporting"
+		KEYNAME "Software\Policies\FlyTrap"
+		EXPLAIN "Disables debug report generation.
+
+If disabled, FlyTrap will not handle debug report requests within applicataions.  Requests will be silently ignored.
+
+If enabled or not configured, FlyTrap will generate and send debug reports when requested.
+
+This setting appears in both the Computer Configuration and User Configuration folders.  If these settings conflict, the setting in Computer Configuration takes precedence over the settings in User Configuration.
+
+Recommended Setting: Not Configured"
+		SUPPORTED "FlyTrap 1.0 or Later"
+		VALUENAME "SendDebugReports"
+		VALUEON "1" VALUEOFF "0"
+	END POLICY
+
+END CATEGORY

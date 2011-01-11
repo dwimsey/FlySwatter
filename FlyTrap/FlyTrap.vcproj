@@ -305,6 +305,10 @@
 			</FileConfiguration>
 		</File>
 		<File
+			RelativePath=".\mswindows\FlyTrap.adm"
+			>
+		</File>
+		<File
 			RelativePath=".\pages.doxy"
 			>
 		</File>
