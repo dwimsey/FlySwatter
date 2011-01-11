@@ -8,7 +8,7 @@
  * Primary FlyTrap definitions.
  *
  * @section License
- * Copyright (c) 2003-2010, David Wimsey
+ * Copyright (c) 2003-2011, David Wimsey
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
