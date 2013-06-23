@@ -24,7 +24,7 @@
 				</thead>
 				<tbody>
 					<xsl:for-each select="ErrorReports/ReportInfo/.">
-						<xsl:sort select="FileTimestamp" data-type="number" order="descending" />
+						<xsl:sort select="DateSubmitted" data-type="number" order="descending" />
 						<tr>
 							<td>
 								<a>
