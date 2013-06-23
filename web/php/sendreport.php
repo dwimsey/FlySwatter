@@ -57,6 +57,12 @@ foreach($_POST as $paramName => $paramValue) {
 	if($paramName == "FlyTrapCrashId") {
 		$fscid = $paramValue;
 	}
+
+	// TODO Add hack to fixup incoming broking &amp;'s
+	$paramValue = str_replace("&#xA;", "\r", $paramValue);
+	$paramValue = str_replace("&#xD;", "\n", $paramValue);
+	$paramValue = str_replace("&", "&amp;", $paramValue);
+
 	$params->appendChild($xmlDoc->createElement($paramName, $paramValue));
 }
 
@@ -66,12 +72,16 @@ foreach($_SERVER as $paramName => $paramValue) {
 		if($paramValue == null) {
 			$params->appendChild($xmlDoc->createElement('NULL', 'NULL'));
 		} else {
+			$paramValue = str_replace("&#xA;", "\r", $paramValue);
+			$paramValue = str_replace("&#xD;", "\n", $paramValue);
 			$params->appendChild($xmlDoc->createElement('NULL', $paramValue));
 		}
 	} else {
 		if($paramValue == null) {
 			$params->appendChild($xmlDoc->createElement($paramName, 'NULL'));
 		} else {
+			$paramValue = str_replace("&#xA;", "\r", $paramValue);
+			$paramValue = str_replace("&#xD;", "\n", $paramValue);
 			$params->appendChild($xmlDoc->createElement($paramName, $paramValue));
 		}
 	}
